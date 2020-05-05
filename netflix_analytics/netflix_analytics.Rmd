@@ -1,0 +1,325 @@
+---
+title: "Анализ фильмов и ТВ-передач на Netflix"
+output: 
+  html_document:
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, echo=FALSE,include=FALSE}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+knitr::opts_chunk$set(echo = FALSE, message = F, warning = F)
+```
+
+## Введение
+
+Этот датасет я нашел на <https://www.kaggle.com/>[^1]. В нем хранятся данные о фильмах, сериалах и телепередачах, содержащихся в базе Netflix. Конкретных целей у меня нет, поэтому я просто "покручу" данные для выявления различных закономерностей.
+
+Скрипт анализа можно найти в моем гитхаб-репозитории[^2].
+
+[^1]: [Прямая ссылка на данные](https://www.kaggle.com/shivamb/netflix-shows)
+[^2]: [Github](https://github.com/tikhonmukha)
+
+```{r}
+netflix <- read.csv("netflix_titles.csv", stringsAsFactors = T,encoding = "UTF-8")
+netflix$show_id <- as.factor(netflix$show_id)
+netflix$release_year <- as.factor(netflix$release_year)
+netflix <- netflix[,-12]
+```
+
+## Обработка данных
+
+Датасет содержит `r ncol(netflix)` столбцов, которые содержат `r nrow(netflix)` записи. В столбцах находятся следующие данные:
+
+```{r, include=TRUE}
+x <- c("Уникальный идентификатор",
+       "Тип (кино/ТВ-шоу)",
+       "Название",
+       "Режиссер",
+       "Актерский состав",
+       "Страна выпуска",
+       "Дата добавления на Netflix",
+       "Год выпуска в прокат",
+       "Возрастной рейтинг",
+       "Длительность",
+       "В каких категориях на Netflix размещен")
+tib <- tibble("Столбец" = colnames(netflix), "Описание" = x)
+tib %>% 
+  knitr::kable(caption = "Описание столбцов датасета",
+               digits = c(0,0))
+```
+
+Возрастные рейтинги взяты из двух американских систем рейтингов: Американской киноассоциации и Федерального агентства по связи США[^3]. Из-за этого некоторые рейтинги с разными названиями, по сути, дублируют друг друга. Поэтому рейтинги-дубликаты Федерального агентства по связи США я заменил на рейтинги Американской киноассоциации. 
+После замены рейтингов можно приступать к анализу.
+
+[^3]: [Система кинорейтингов](https://posmotre.li/%D0%A1%D0%B8%D1%81%D1%82%D0%B5%D0%BC%D0%B0_%D1%80%D0%B5%D0%B9%D1%82%D0%B8%D0%BD%D0%B3%D0%BE%D0%B2_%D0%B4%D0%BB%D1%8F_%D0%BA%D0%B8%D0%BD%D0%BE%D1%84%D0%B8%D0%BB%D1%8C%D0%BC%D0%BE%D0%B2#.D0.A1.D0.B8.D1.81.D1.82.D0.B5.D0.BC.D0.B0_.D1.80.D0.B5.D0.B9.D1.82.D0.B8.D0.BD.D0.B3.D0.BE.D0.B2_.D0.90.D0.BC.D0.B5.D1.80.D0.B8.D0.BA.D0.B0.D0.BD.D1.81.D0.BA.D0.BE.D0.B9_.D0.BA.D0.B8.D0.BD.D0.BE.D0.B0.D1.81.D1.81.D0.BE.D1.86.D0.B8.D0.B0.D1.86.D0.B8.D0.B8)
+
+```{r}
+netflix_dp <- as_tibble(netflix)
+netflix_dp$date_added <- as.character(netflix_dp$date_added)
+datadd <- as.matrix(netflix_dp$date_added)
+datadd <- trimws(datadd, which = c("left"))
+datadd <- as.data.frame(datadd)
+colnames(datadd) <- "date_added"
+datadd <- separate(datadd, date_added, c("dm_added", "year_added"), sep = ", ")
+datadd <- separate(datadd, dm_added, c("month_added", "day_added"), sep = " ")
+netflix_dp <- cbind(netflix_dp, datadd)
+netflix_dp <- as_tibble(netflix_dp)
+netflix_dp <- netflix_dp[,c(1,2,3,4,5,6,7,12,13,14,8,9,10,11)]
+netflix_dp$month_added <- as.factor(netflix_dp$month_added)
+netflix_dp$day_added <- as.factor(netflix_dp$day_added)
+netflix_dp$year_added <- as.factor(netflix_dp$year_added)
+netflix_dp$rating <- as.character(netflix_dp$rating)
+netflix_dp$rating <- gsub("TV-G","G", netflix_dp$rating)
+netflix_dp$rating <- gsub("TV-PG","PG", netflix_dp$rating)
+netflix_dp$rating <- gsub("TV-14","PG-13", netflix_dp$rating)
+netflix_dp$rating <- gsub("TV-MA","R", netflix_dp$rating)
+netflix_dp$rating <- as.factor(netflix_dp$rating)
+```
+
+## Анализ данных
+
+Сперва следует оценить динамику роста числа добавленных фильмов и ТВ-шоу:
+
+```{r}
+netflix_dp_date <- netflix_dp %>% 
+  group_by(year_added, type) %>%
+  filter(as.character(year_added) != "2020") %>% 
+  summarise(add_today = n()) %>% 
+  ungroup() %>% 
+  group_by(type) %>% 
+  mutate(total_num = cumsum(add_today))
+
+```
+
+```{r, include=TRUE}
+ggplot(netflix_dp_date, aes(x = year_added, y = total_num, group = type, color = type))+
+  geom_line(size = 1.25, na.rm = T)+
+  geom_point(size = 2, na.rm = T)+
+  scale_x_discrete(name = "Year added",breaks = c("2009","2011","2013","2015","2017","2019"))+
+  scale_y_continuous(name = "Cumulative amount")+
+  ggtitle("Increase dynamics of movies and TV-shows")+
+  theme(legend.position = "top")
+```
+
+стремительный рост добавления контента начинается с 2015 года, при этом заметно впереди находится количество добавляемых фильмов.
+
+Далее рассмотрим динамику относительно возрастных рейтингов добавляемого контента:
+
+```{r, include=TRUE}
+netflix_dp_rating_film <- netflix_dp %>%
+  filter(as.character(year_added) != "2020") %>%
+  filter(as.character(type) == "Movie") %>%
+  select(c("type", "year_added", "rating")) %>% 
+  group_by(type, year_added, rating) %>% 
+  summarise(num = n())
+
+netflix_dp_rating_tvshow <- netflix_dp %>%
+  filter(as.character(year_added) != "2020") %>%
+  filter(as.character(type) == "TV Show") %>%
+  select(c("type", "year_added", "rating")) %>% 
+  group_by(type, year_added, rating) %>% 
+  summarise(num = n())
+
+netflix_dp_rating <- union(netflix_dp_rating_film, netflix_dp_rating_tvshow)
+
+ggplot(netflix_dp_rating, aes(x = year_added, y = num, group = rating, color = rating))+
+  geom_line()+
+  geom_point()+
+  facet_wrap( ~ type)+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = rel(0.85)))+
+  xlab("year added in Netflix")+
+  ylab("Number")+
+  ggtitle("The dynamics of movies and TV-shows ratings")
+```
+
+как по фильмам, так и по ТВ-шоу лидирует рейтинг "R" - недоступно для детей без сопровождения родителей. Данный факт отражает высокую степень спроса на контент с этим рейтингом, ведь где спрос - там и предложение.
+
+Теперь оценим активность стран в производстве контента:
+
+```{r, include=TRUE}
+netflix_dp_country_film <- netflix_dp %>%
+  filter(as.character(type) == "Movie") %>% 
+  group_by(country, type) %>% 
+  summarise(num = n()) %>% 
+  arrange(desc(num)) %>%
+  filter(as.character(country) != "") %>%
+  head(10)
+
+netflix_dp_country_tvshow <- netflix_dp %>%
+  filter(as.character(type) == "TV Show") %>% 
+  group_by(country, type) %>% 
+  summarise(num = n()) %>% 
+  arrange(desc(num)) %>%
+  filter(as.character(country) != "") %>%
+  head(10)
+
+netflix_dp_country <- union(netflix_dp_country_film, netflix_dp_country_tvshow)
+
+netflix_dp_country$country <- reorder(netflix_dp_country$country, netflix_dp_country$num, fun = max)
+
+ggplot(netflix_dp_country, aes(x = reorder(country, -num), y = num))+
+  geom_col()+
+  facet_wrap( ~ type, scales = "free_x")+
+  xlab("country")+
+  ylab("total amount")+
+  ggtitle("Total amount of content produced by Top-10 countries")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1, size = rel(0.85)))
+```
+
+в производстве фильмов явно выделяются три лидера: США, Индия и Великобритания. США держит лидерство в обеих категориях (неудивительно). Индия, имеющая значительный отрыв от 8 конкурентов в производстве фильмов, значительно уступает многим из них в производстве ТВ-шоу. В целом, 7 из 10 участников каждой группы  находятся в обоих топах.
+
+Теперь следует разобраться: какие жанры наиболее популярны? В базе каждый фильм/ТВ-шоу расположен сразу в нескольких жанрах, поэтому нужно разделить записи о жанрах так, чтобы каждому одному фильму/ТВ-шоу соответствовал один жанр. Чтобы остальные жанры не потерялись, каждая запись об одном фильме/ТВ-шоу будет дублироваться по количеству жанров, к которым этот фильм/ТВ-шоу отнесен.
+
+```{r, echo=FALSE, include=TRUE}
+netflix_dp_genre <- netflix_dp %>%
+  select(c("show_id","type","listed_in")) %>% 
+  separate_rows(listed_in, sep = ",")
+
+netflix_dp_genre$listed_in <- trimws(netflix_dp_genre$listed_in)
+netflix_dp_genre$listed_in <- as.factor(netflix_dp_genre$listed_in)
+
+netflix_dp_genre <- netflix_dp_genre %>% 
+  group_by(type, listed_in) %>% 
+  summarise(num = n()) %>% 
+  arrange(desc(num))
+
+ggplot(netflix_dp_genre, aes(x = reorder(listed_in, -num), y = num))+
+  geom_col()+
+  facet_wrap(~ type, scales = "free_x")+
+  xlab("category")+
+  ylab("total amount")+
+  ggtitle("Content-category distribution")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1, size = rel(0.85)))
+```
+
+Топ-3 жанра неизменен для фильмов и ТВ-шоу: международные, драмы и комедии, что подтверждает высокий спрос на контент этих жанров.
+
+А как жанры распределены по странам?
+
+```{r, include=TRUE, fig.height=10}
+netflix_dp_country_genre_movie <- netflix_dp %>% 
+  filter(as.character(type) == "Movie") %>% 
+  select(c("show_id", "type","country", "listed_in")) %>% 
+  mutate_at(c("country", "listed_in"), as.character) %>% 
+  separate_rows(country, sep = ",") %>% 
+  separate_rows(listed_in, sep = ",") %>% 
+  mutate_at(c("country", "listed_in"), trimws) %>% 
+  mutate_at(c("country", "listed_in"), as.factor)
+
+netflix_dp_country_genre_movie_cor <- netflix_dp_country_genre_movie %>%
+  filter(as.character(country) != "") %>% 
+  filter(as.character(listed_in) != "") %>% 
+  group_by(type, country, listed_in) %>% 
+  summarise(matches = n()) %>% 
+  arrange(desc(matches)) %>% 
+  head(50)
+
+netflix_dp_country_genre_tvshow <- netflix_dp %>% 
+  filter(as.character(type) == "TV Show") %>% 
+  select(c("show_id", "type","country", "listed_in")) %>% 
+  mutate_at(c("country", "listed_in"), as.character) %>% 
+  separate_rows(country, sep = ",") %>% 
+  separate_rows(listed_in, sep = ",") %>% 
+  mutate_at(c("country", "listed_in"), trimws) %>% 
+  mutate_at(c("country", "listed_in"), as.factor)
+
+netflix_dp_country_genre_tvshow_cor <- netflix_dp_country_genre_tvshow %>%
+  filter(as.character(country) != "") %>% 
+  filter(as.character(listed_in) != "") %>% 
+  group_by(type, country, listed_in) %>% 
+  summarise(matches = n()) %>%
+  arrange(desc(matches)) %>% 
+  head(50)
+
+netflix_dp_country_genre <- union(netflix_dp_country_genre_movie_cor, netflix_dp_country_genre_tvshow_cor)
+netflix_dp_country_genre$country <- as.factor(netflix_dp_country_genre$country)
+netflix_dp_country_genre$listed_in <- as.factor(netflix_dp_country_genre$listed_in)
+
+ggplot(netflix_dp_country_genre, aes(x = reorder(listed_in, matches), y = reorder(country, matches), fill = matches))+
+  geom_tile()+
+  scale_fill_distiller(palette = "Spectral")+
+  facet_wrap( ~ type, scales = "free", nrow = 2)+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = rel(0.85)), axis.text.y = element_text(size = rel(0.85)))+
+  xlab("genre")+
+  ylab("country")+
+  ggtitle("Countries and genres they frequently working in")
+```
+
+Здесь можно отметить несколько фактов:
+
+1. США - наиболее активная страна-производитель контента. Она представлена во всех киножанрах и практически во всех ТВ-жанрах.
+2. Две единственные категории, в которых работают все представленные участники - международное кино и международные ТВ-шоу.
+3. Индия - самый активный производитель международных фильмов (привет, Болливуд) и в целом активно работает на кинорынке, но при этом практически отсутствует на рынке ТВ-шоу.
+
+Осталось понять как между собой взаимодействуют актеры и режиссеры, какие актеры и режиссеры работают друг с другом наиболее часто:
+
+```{r, include=TRUE, fig.height=10}
+netflix_dp_persons_movie <- netflix_dp %>% 
+  select(show_id, type, cast, director) %>%
+  filter(as.character(type) == "Movie") %>% 
+  mutate_at(c("cast", "director"), as.character) %>% 
+  separate_rows(cast, sep = ",") %>% 
+  separate_rows(director, sep = ",")
+
+netflix_dp_persons_movie$cast <- trimws(netflix_dp_persons_movie$cast)
+netflix_dp_persons_movie$director <- trimws(netflix_dp_persons_movie$director)
+netflix_dp_persons_movie$cast <- as.factor(netflix_dp_persons_movie$cast)
+netflix_dp_persons_movie$director <- as.factor(netflix_dp_persons_movie$director)
+
+netflix_dp_persons_movie_cor <- netflix_dp_persons_movie %>%
+  filter(as.character(director) != "") %>% 
+  filter(as.character(cast) != "") %>% 
+  group_by(type, cast, director) %>% 
+  summarise(matches = n()) %>% 
+  arrange(desc(matches)) %>% 
+  head(25)
+
+netflix_dp_persons_tvshow <- netflix_dp %>% 
+  select(show_id, type, cast, director) %>%
+  filter(as.character(type) == "TV Show") %>% 
+  mutate_at(c("cast", "director"), as.character) %>% 
+  separate_rows(cast, sep = ",") %>% 
+  separate_rows(director, sep = ",")
+
+netflix_dp_persons_tvshow$cast <- trimws(netflix_dp_persons_tvshow$cast)
+netflix_dp_persons_tvshow$director <- trimws(netflix_dp_persons_tvshow$director)
+netflix_dp_persons_tvshow$cast <- as.factor(netflix_dp_persons_tvshow$cast)
+netflix_dp_persons_tvshow$director <- as.factor(netflix_dp_persons_tvshow$director)
+
+netflix_dp_persons_tvshow_cor <- netflix_dp_persons_tvshow %>%
+  filter(as.character(director) != "") %>% 
+  filter(as.character(cast) != "") %>% 
+  group_by(type, cast, director) %>% 
+  summarise(matches = n()) %>% 
+  arrange(desc(matches)) %>% 
+  head(25)
+
+netflix_dp_persons_cor <- union(netflix_dp_persons_movie_cor, netflix_dp_persons_tvshow_cor)
+netflix_dp_persons_cor$cast <- as.factor(netflix_dp_persons_cor$cast)
+netflix_dp_persons_cor$director <- as.factor(netflix_dp_persons_cor$director)
+
+ggplot(netflix_dp_persons_cor, aes(x = reorder(director, matches), y = reorder(cast, matches), fill = matches))+
+  geom_tile()+
+  scale_fill_distiller(palette = "Spectral")+
+  facet_wrap( ~ type, scales = "free", nrow = 2)+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = rel(0.85)), axis.text.y = element_text(size = rel(0.85)))+
+  xlab("director")+
+  ylab("actor")+
+  ggtitle("Pairs most frequently working together")
+```
+
+Наиболее часто вместе работают актеры и режиссеры на кинорынке.Встречаются пары, работавшие вместе 6-7 раз (ох уж эти индусы). Рынок ТВ-шоу имеет всего лишь несколько совместных работ, что можно несколько оправдать более низким числом  ТВ-шоу, имеющихся на Netflix.
+
+## Выводы
+
+По итогам анализа можно сделать несколько выводов:
+
+1. Производство фильмов значительно опережает производство ТВ-шоу, хотя до 2015 года в обеих категориях динамика была практически нулевая.
+2. Спрос на контент рейтинга "18+" оказался (ожидаемо) высоким, что стимулирует его массовое производство.
+3. На кинорынке наиболее активными игроками являются США, Индия и Великобритания, при этом на рынке ТВ-шоу Индия не является настолько активным участником.
+4. Прочное лидерство среди жанров как по фильмам, так и по ТВ-шоу удерживают международные фильмы/ТВ-шоу, драмы и комедии.
+5. США представлены практически во всех жанрах кинорынка и рынка ТВ-шоу, а единственными категориями, в которых работают практически все страны, являются международные фильмы/ТВ-шоу.
+6. Наиболее часто друг с другом работают актеры и режиссеры на кинорынке (в основном индийском), редкость совместных работ на рынке ТВ-шоу объсняется малыми объемами производства ТВ-контента в сравнении с производством фильмов.
