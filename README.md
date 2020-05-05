@@ -1,1 +1,1 @@
-# retail_sales_analyse
+Different analytics using R
