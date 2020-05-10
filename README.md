@@ -1,1 +1,1 @@
-Different analytics using R
+Different analytics projects using R
