@@ -9,7 +9,7 @@ library(MASS)
 spotify <- read.csv("top10s.csv", stringsAsFactors = T, na.strings = "Inf")
 head(spotify)
 str(spotify)
-spotify$title <- gsub("é","e", spotify$title)
+spotify$title <- gsub("Ð¹","e", spotify$title)
 
 spotify_dp <- as_tibble(spotify)
 spotify_dp <- spotify_dp %>% 
@@ -29,59 +29,24 @@ spotcoradv <- spotify_dp %>%
   select(spch, dur, val, live, dB, dnce, nrgy, bpm) 
 ggpairs(spotcoradv)
 
-spotify_dp_bpm <- spotify_dp %>% 
-  select(year, bpm) %>% 
-  mutate_at("year", as.factor) %>% 
-  mutate("index" = as.factor("bpm")) %>% 
-  rename("value" = bpm)
+spot_selection <- function(col){
+  spotify_dp %>% 
+    select(year, col) %>% 
+    mutate_at("year", as.factor) %>% 
+    mutate("index" = as.factor(col)) %>% 
+    rename("value" = col)
+}
 
-spotify_dp_nrgy <- spotify_dp %>% 
-  select(year, nrgy) %>% 
-  mutate_at("year", as.factor) %>% 
-  mutate("index" = as.factor("nrgy")) %>% 
-  rename("value" = nrgy)
+spotify_dp_bpm <- spot_selection("bpm")
+spotify_dp_nrgy <- spot_selection("nrgy")
+spotify_dp_dnce <- spot_selection("dnce")
+spotify_dp_dB <- spot_selection("dB")
+spotify_dp_live <- spot_selection("live")
+spotify_dp_val <- spot_selection("val")
+spotify_dp_dur <- spot_selection("dur")
+spotify_dp_acous <- spot_selection("acous")
+spotify_dp_spch <- spot_selection("spch")
 
-spotify_dp_dnce <- spotify_dp %>% 
-  select(year, dnce) %>% 
-  mutate_at("year", as.factor) %>% 
-  mutate("index" = as.factor("dnce")) %>% 
-  rename("value" = dnce)
-
-spotify_dp_dB <- spotify_dp %>% 
-  select(year, dB) %>% 
-  mutate_at("year", as.factor) %>% 
-  mutate("index" = as.factor("dB")) %>% 
-  rename("value" = dB)
-
-spotify_dp_live <- spotify_dp %>% 
-  select(year, live) %>% 
-  mutate_at("year", as.factor) %>% 
-  mutate("index" = as.factor("live")) %>% 
-  rename("value" = live)
-
-spotify_dp_val <- spotify_dp %>% 
-  select(year, val) %>% 
-  mutate_at("year", as.factor) %>% 
-  mutate("index" = as.factor("val")) %>% 
-  rename("value" = val)
-
-spotify_dp_dur <- spotify_dp %>% 
-  select(year, dur) %>% 
-  mutate_at("year", as.factor) %>% 
-  mutate("index" = as.factor("dur")) %>% 
-  rename("value" = dur)
-
-spotify_dp_acous <- spotify_dp %>% 
-  select(year, acous) %>% 
-  mutate_at("year", as.factor) %>% 
-  mutate("index" = as.factor("acous")) %>% 
-  rename("value" = acous)
-
-spotify_dp_spch <- spotify_dp %>% 
-  select(year, spch) %>% 
-  mutate_at("year", as.factor) %>% 
-  mutate("index" = as.factor("spch")) %>% 
-  rename("value" = spch)
 
 spotify_dp_trend <- rbind(spotify_dp_bpm, spotify_dp_nrgy, spotify_dp_dnce, 
                           spotify_dp_dB, spotify_dp_live, spotify_dp_val,
@@ -99,6 +64,17 @@ ggplot(spotify_dp_trend, aes(x = year, y = median_value, group = index, color = 
   theme(axis.text.x = element_text(size = 7, angle = 30),legend.position = "none", plot.title = element_text(hjust = 0.5))+
   labs(y = "median value",
        title = "10-years trends in Spotify best songs")
+
+spotify_genres <- spotify_dp %>% 
+  select(top_genre, year, pop) %>% 
+  mutate_at("year", as.factor)
+
+ggplot(spotify_genres, aes(x = year, y = reorder(top_genre,pop), fill = pop))+
+  geom_tile()+
+  scale_fill_distiller(palette = "Spectral")+
+  theme(plot.title = element_text(hjust = 0.5),axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1, size = rel(0.9)), axis.text.y = element_text(size = rel(0.9)))+
+  labs(y = "genres",
+       title = "Genres popularity dynamics")
 
 ##########################################################################
 spotify_dp_num <- spotify_dp[6:15]
