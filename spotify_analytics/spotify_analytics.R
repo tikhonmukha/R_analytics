@@ -5,6 +5,7 @@ library(corrplot)
 library(GGally)
 library(lmtest)
 library(MASS)
+library(wordcloud)
 
 spotify <- read.csv("top10s.csv", stringsAsFactors = T, na.strings = "Inf")
 head(spotify)
@@ -65,16 +66,50 @@ ggplot(spotify_dp_trend, aes(x = year, y = median_value, group = index, color = 
   labs(y = "median value",
        title = "10-years trends in Spotify best songs")
 
-spotify_genres <- spotify_dp %>% 
+spotify_dp_genres <- spotify_dp %>% 
   select(top_genre, year, pop) %>% 
   mutate_at("year", as.factor)
 
-ggplot(spotify_genres, aes(x = year, y = reorder(top_genre,pop), fill = pop))+
+ggplot(spotify_dp_genres, aes(x = year, y = reorder(top_genre,pop), fill = pop))+
   geom_tile()+
   scale_fill_distiller(palette = "Spectral")+
+  theme_minimal()+
   theme(plot.title = element_text(hjust = 0.5),axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1, size = rel(0.9)), axis.text.y = element_text(size = rel(0.9)))+
   labs(y = "genres",
        title = "Genres popularity dynamics")
+
+spotify_dp_artists <- spotify_dp %>% 
+  select(artist) %>% 
+  group_by(artist) %>% 
+  summarise(number = n()) %>% 
+  arrange(desc(number)) %>% 
+  top_n(15, number)
+  
+ggplot(spotify_dp_artists, aes(x = reorder(artist, -number), y = number, fill = number))+
+  geom_col()+
+  theme_minimal()+
+  scale_fill_gradient(low = "yellow", high = "red")+
+  geom_text(aes(label = number), size = 4, vjust = -2)+
+  theme(legend.position = "none",plot.title = element_text(hjust = 0.5),axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1, size = rel(0.9)))+
+  labs(x = "artist",
+       title = "Top-15 most popular artists")
+
+spotify_dp_title <- spotify_dp %>% 
+  select(song_id, title, year, pop) %>% 
+  mutate_at("year", as.factor) %>% 
+  group_by(year) %>%
+  top_n(1, pop) %>% 
+  filter(as.integer(song_id) != 270 & as.integer(song_id) != 271)
+
+ggplot(spotify_dp_title, aes(x = year, y = pop, fill = pop))+
+  geom_col()+
+  theme_minimal()+
+  scale_fill_gradient(low = "yellow", high = "red")+
+  geom_text(aes(label = title), size = 3, vjust = -1)+
+  geom_text(aes(label = pop), size = 4, vjust = 2)+
+  theme(legend.position = "none",plot.title = element_text(hjust = 0.5))+
+  labs(y = "song",
+       title = "Each year most popular song")
 
 ##########################################################################
 spotify_dp_num <- spotify_dp[6:15]
