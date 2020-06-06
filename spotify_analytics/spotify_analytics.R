@@ -142,6 +142,73 @@ hist(fit_test2$residuals)
 hist(spotify_dp_num$pop^2)
 hist(log(spotify_dp_num$nrgy))
 
+qplot(x = dnce, y = log(pop+0.01), data = spotify_dp_num)+
+  geom_smooth(method = "lm")
+
+fit_test3 <- lm(log(pop+0.01) ~ dnce, spotify_dp_num)
+summary(fit_test3)
+shapiro.test(fit_test3$residuals)
+hist(fit_test3$residuals)
+
+qplot(x = dB, y = log(pop+0.01), data = spotify_dp_num)+
+  geom_smooth(method = "lm")
+
+fit_test4 <- lm(log(pop+0.01) ~ dB, spotify_dp_num)
+summary(fit_test4)
+shapiro.test(fit_test4$residuals)
+hist(fit_test4$residuals)
+
+qplot(x = live, y = log(pop+0.01), data = spotify_dp_num)+
+  geom_smooth(method = "lm")
+
+fit_test5 <- lm(log(pop+0.01) ~ live, spotify_dp_num)
+summary(fit_test5)
+shapiro.test(fit_test5$residuals)
+hist(fit_test5$residuals)
+
+qplot(x = val, y = log(pop+0.01), data = spotify_dp_num)+
+  geom_smooth(method = "lm")
+
+fit_test6 <- lm(log(pop+0.01) ~ val, spotify_dp_num)
+summary(fit_test6)
+shapiro.test(fit_test6$residuals)
+hist(fit_test6$residuals)
+
+qplot(x = dur, y = log(pop+0.01), data = spotify_dp_num)+
+  geom_smooth(method = "lm")
+
+fit_test7 <- lm(log(pop+0.01) ~ dur, spotify_dp_num)
+summary(fit_test7)
+shapiro.test(fit_test7$residuals)
+hist(fit_test7$residuals)
+
+qplot(x = acous^0.5, y = log(pop+0.01), data = spotify_dp_num)+
+  geom_smooth(method = "lm")
+
+fit_test8 <- lm(log(pop+0.01) ~ sqrt(acous), spotify_dp_num)
+summary(fit_test8)
+shapiro.test(fit_test8$residuals)
+hist(fit_test8$residuals)
+
+qplot(x = log(spch+1), y = log(pop+0.01), data = spotify_dp_num)+
+  geom_smooth(method = "lm")
+
+fit_test9 <- lm(log(pop+0.01) ~ log(spch+1), spotify_dp_num)
+summary(fit_test9)
+shapiro.test(fit_test9$residuals)
+hist(fit_test9$residuals)
+
+fit3 <- lm(log(pop+0.01) ~ bpm + nrgy + dnce + dB + live + val + dur + sqrt(acous) + log(spch+1), spotify_dp_num)
+summary(fit3)
+hist(fit3$residuals)
+shapiro.test(fit3$residuals)
+
+qplot(x = fit3$residuals, y = log(pop+0.01), data = spotify_dp_num)+
+  geom_smooth(method = "lm")
+
+spotify_dp_num$predicted <- exp(predict(fit3))
+
+
 spotify_num <- spotify[6:15]
 
 spotify_num$bpm <- as.numeric(gsub("\\.", "", spotify_num$bpm))
