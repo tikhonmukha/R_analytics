@@ -87,3 +87,18 @@ ggplot(campus_dp_boxplot2, aes(x = value, fill = index))+
         legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
   guides(fill = guide_legend(title = NULL))+
   labs(title = "Indexes normal distribution")
+
+campus_chisq <- function(col){
+  campus_dp_chisq <- campus_dp %>% 
+    select(col, status)
+  campus_dp_chisq <- table(campus_dp_chisq)
+  fisher.test(campus_dp_chisq)
+}
+
+campus_chisq("gender")
+campus_chisq("ssc_b")
+campus_chisq("hsc_b")
+campus_chisq("hsc_s")
+campus_chisq("degree_t")
+campus_chisq("workex")
+campus_chisq("specialisation")
