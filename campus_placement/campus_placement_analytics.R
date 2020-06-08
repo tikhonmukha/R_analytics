@@ -24,6 +24,19 @@ campus_dp_etest_p <- camp_selection("etest_p")
 campus_dp_mba_p <- camp_selection("mba_p")
 campus_dp_salary <- camp_selection("salary")
 
+t1 <- t.test(value ~ status, campus_dp_ssc_p)$p.value
+t2 <- t.test(value ~ status, campus_dp_hsc_p)$p.value
+t3 <- t.test(value ~ status, campus_dp_degree_p)$p.value
+t4 <- t.test(value ~ status, campus_dp_etest_p)$p.value
+t5 <- t.test(value ~ status, campus_dp_mba_p)$p.value
+
+campus_t_test <- as_tibble(data.frame(index = c("ssc_p", "hsc_p", "degree_p", "etest_p", "mba_p"),
+                     value = c(t1, t2, t3, t4, t5)))
+
+campus_t_test$important <- ifelse(campus_t_test$value >= 0.05, "No", "Yes")
+
+campus_t_test
+
 campus_dp_boxplot <- rbind(campus_dp_ssc_p, campus_dp_hsc_p, campus_dp_degree_p,
                            campus_dp_etest_p, campus_dp_mba_p, campus_dp_salary)
 
@@ -35,6 +48,7 @@ ggplot(campus_dp_boxplot, aes(x = status, y = value, fill = index))+
                                  "Degree percentage",
                                  "Employability test percentage\n( conducted by college)",
                                  "MBA percentage", "Salary"))+
+  theme_minimal()+
   theme(legend.text = element_text(lineheight = .8), legend.key.height = unit(1, "cm"),
         legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
   guides(fill = guide_legend(title = NULL))+
@@ -55,6 +69,7 @@ ggplot(campus_dp_boxplot, aes(x = value, fill = index))+
                                  "Degree percentage",
                                  "Employability test percentage\n( conducted by college)",
                                  "MBA percentage", "Salary"))+
+  theme_minimal()+
   theme(legend.text = element_text(lineheight = .8), legend.key.height = unit(0.5, "cm"),
         legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
   guides(fill = guide_legend(title = NULL))+
@@ -83,6 +98,7 @@ ggplot(campus_dp_boxplot2, aes(x = value, fill = index))+
                                  "Degree percentage",
                                  "Employability test percentage\n( conducted by college)",
                                  "MBA percentage", "Salary"))+
+  theme_minimal()+
   theme(legend.text = element_text(lineheight = .8), legend.key.height = unit(0.5, "cm"),
         legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
   guides(fill = guide_legend(title = NULL))+
@@ -95,10 +111,52 @@ campus_chisq <- function(col){
   fisher.test(campus_dp_chisq)
 }
 
-campus_chisq("gender")
-campus_chisq("ssc_b")
-campus_chisq("hsc_b")
-campus_chisq("hsc_s")
-campus_chisq("degree_t")
-campus_chisq("workex")
-campus_chisq("specialisation")
+c1 <- campus_chisq("gender")$p.value
+c2 <- campus_chisq("ssc_b")$p.value
+c3 <- campus_chisq("hsc_b")$p.value
+c4 <- campus_chisq("hsc_s")$p.value
+c5 <- campus_chisq("degree_t")$p.value
+c6 <- campus_chisq("workex")$p.value
+c7 <- campus_chisq("specialisation")$p.value
+
+campus_chisq_dp <- as_tibble(data_frame("index" = c("gender", "ssc_b", "hsc_b", "hsc_s", "degree_t",
+            "workex", "specialisation"), "value" = c(c1, c2, c3, c4, c5, c6, c7)))
+
+campus_chisq_dp$important <- ifelse(campus_chisq_dp$value >= 0.05, "No", "Yes")
+
+campus_chisq_dp
+
+campus_dp$status_log <- ifelse(campus_dp$status == "Not Placed", 0, 1)
+
+levels(campus_dp$workex)
+levels(campus_dp$specialisation)
+
+campus_dp$workex_log <- ifelse(campus_dp$workex == "No", 0, 1)
+
+campus_dp$specialisation_log <- ifelse(campus_dp$specialisation == "Mkt&Fin", 0, 1)
+
+
+#logistic regression with ssc_p, hsc_p, degree_p, workex, specialisation
+
+fit <- glm(status_log ~ ssc_p + hsc_p + degree_p + workex_log + specialisation_log, data = campus_dp, family = "binomial")
+summary(fit)
+fit$residuals
+plot(fit$residuals)
+fit$linear.predictors
+
+predict.glm(object = fit, type = "response")
+campus_dp$status
+
+table(ifelse(predict.glm(object = fit, type = "response") >= 0.5, "Placed", "Not Placed"))
+table(campus_dp$status)
+
+campus_dp$predict <- predict.glm(object = fit, type = "response")
+campus_dp$predictors <- fit$linear.predictors
+
+ggplot(data = campus_dp ,aes(x = predictors, y = predict))+
+  geom_hline(yintercept=0.5, linetype="dashed", color = "red", size = 1.5)+
+  geom_line(lwd = 2, colour = "blue")+
+  labs(y="probability", title="Placement probability")+
+  theme_minimal()+
+  theme(plot.title = element_text(hjust = 0.5))+
+  scale_x_continuous(limits = c(-9, 9), breaks = seq(-9, 9, by = 3))
