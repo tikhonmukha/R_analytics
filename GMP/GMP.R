@@ -101,7 +101,7 @@ db_brands_20_pivot <- db_brands_20[order(Производитель),.(sum_volum
                                                           sum_value_20 = sum(value_share_20),
                                                           sum_offtake_20 = sum(offtake_20)), by = c('Производитель', 'Бренд')]
 
-db_brands_pivot <- merge(db_brands_20_pivot, db_brands_19_pivot, all.x = T, all.y = T)
+db_brands_pivot <- merge(db_brands_20_pivot, db_brands_19_pivot, all = T)
 
 db_brands_right <- db_brands_pivot[,list(Производитель, Бренд, volume_share_20 = sum_volume_20, value_share_20 = sum_value_20,
                                    offtake_20 = sum_offtake_20, price_index_20 = sum_value_20/sum_volume_20*100,
@@ -135,4 +135,27 @@ db_sku_20_aggregate <- db_sku_20[,.(sum_volume_20 = sum(volume_share_20),
                                     sum_value_20 = sum(value_share_20),
                                     sum_offtake_20 = sum(offtake_20)), by = c('Производитель', 'Бренд', 'Масса', 'Сквозное Имя')]
 
-merge(db_sku_20_aggregate, db_sku_19_aggregate, all = T)
+db_sku_aggregate <- merge(db_sku_20_aggregate, db_sku_19_aggregate, all = T)
+
+setorder(db_sku_aggregate, sum_volume_20)
+
+db_sku_top10 <- db_sku_aggregate[(nrow(db_sku_aggregate)-19):nrow(db_sku_aggregate),]
+
+setorder(db_sku_top10, -sum_volume_20)
+
+setnames(db_sku_top10, c("sum_volume_20","sum_value_20","sum_offtake_20",
+                         "sum_volume_19","sum_value_19","sum_offtake_19"),
+         c("volume_share_20","value_share_20","offtake_20","volume_share_19","value_share_19","offtake_19"))
+
+db_sku_top10_right <- db_sku_top10[,list(Производитель,Бренд,Масса,`Сквозное Имя`,volume_share_20,
+                                value_share_20,offtake_20,price_index_20=value_share_20/volume_share_20*100,
+                                volume_share_19,value_share_19,offtake_19,
+                                price_index_19=value_share_19/volume_share_19*100)]
+
+db_sku_top10_full <- db_sku_top10_right[,list(Производитель,Бренд,Масса,`Сквозное Имя`,
+                                      volume_share_20,vs.YA1=volume_share_20-volume_share_19,
+                                      value_share_20,vs.YA2=value_share_20-value_share_19,
+                                      price_index_20,vs.YA3=price_index_20-price_index_19,
+                                      offtake_20,vs.YA4=offtake_20-offtake_19)]
+
+###Сегментация: тип упаковки, грамматура, наполнитель и тд...
