@@ -159,3 +159,54 @@ db_sku_top10_full <- db_sku_top10_right[,list(Производитель,Бре�
                                       offtake_20,vs.YA4=offtake_20-offtake_19)]
 
 ###Сегментация: тип упаковки, грамматура, наполнитель и тд...
+####Наполнитель
+
+db_segm_19_nap <- database_dt[Год_месяц %in% c("MAT FEB 2019")][,list(Наполнитель,
+                                                                         volume_share_19 = `Продажи в кг`)][!Наполнитель %in% c("-")]
+
+db_segm_19_nap_aggregate <- db_segm_19_nap[,.(volume_share_19 = sum(volume_share_19)), by = c('Наполнитель')]
+
+db_segm_20_nap <- database_dt[Год_месяц %in% c("MAT FEB 2020")][,list(Наполнитель,
+                                                                                 volume_share_20 = `Продажи в кг`)][!Наполнитель %in% c("-")]
+
+db_segm_20_nap_aggregate <- db_segm_20_nap[,.(volume_share_20 = sum(volume_share_20)), by = c('Наполнитель')]
+
+db_segm_nap_aggregate <- merge(db_segm_20_nap_aggregate, db_segm_19_nap_aggregate, all = T)
+
+setorder(db_segm_nap_aggregate, volume_share_20)
+
+db_segm_nap_top10 <- db_segm_nap_aggregate[(nrow(db_segm_nap_aggregate)-9):nrow(db_segm_nap_aggregate),]
+
+setorder(db_segm_nap_top10, -volume_share_20)
+
+####Упаковка
+
+db_segm_19_up <- database_dt[Год_месяц %in% c("MAT FEB 2019")][,list(`Тип упаковки`,
+                                                                                 volume_share_19 = `Продажи в кг`)]
+
+db_segm_19_up_aggregate <- db_segm_19_up[,.(volume_share_19 = sum(volume_share_19)), by = c('Тип упаковки')]
+
+db_segm_20_up <- database_dt[Год_месяц %in% c("MAT FEB 2020")][,list(`Тип упаковки`,
+                                                                                 volume_share_20 = `Продажи в кг`)]
+
+db_segm_20_up_aggregate <- db_segm_20_up[,.(volume_share_20 = sum(volume_share_20)), by = c('Тип упаковки')]
+
+db_segm_up_aggregate <- merge(db_segm_20_up_aggregate, db_segm_19_up_aggregate, all = T)
+
+setorder(db_segm_up_aggregate, -volume_share_20)
+
+####Грамматура
+
+db_segm_19_gram <- database_dt[Год_месяц %in% c("MAT FEB 2019")][,list(Масса,
+                                                                     volume_share_19 = `Продажи в кг`)]
+
+db_segm_19_gram_aggregate <- db_segm_19_gram[,.(volume_share_19 = sum(volume_share_19)), by = c('Масса')]
+
+db_segm_20_gram <- database_dt[Год_месяц %in% c("MAT FEB 2020")][,list(Масса,
+                                                                     volume_share_20 = `Продажи в кг`)]
+
+db_segm_20_gram_aggregate <- db_segm_20_gram[,.(volume_share_20 = sum(volume_share_20)), by = c('Масса')]
+
+db_segm_gram_aggregate <- merge(db_segm_20_gram_aggregate, db_segm_19_gram_aggregate, all = T)
+
+setorder(db_segm_gram_aggregate, -Масса)
