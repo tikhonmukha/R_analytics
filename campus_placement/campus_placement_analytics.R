@@ -5,10 +5,11 @@ library(GGally)
 
 campus <- read.csv("Placement_Data_Full_Class.csv", header = T, stringsAsFactors = T, na.strings = "")
 head(campus)
-str(campus)
 
 campus_dp <- as_tibble(campus)
 campus_dp$salary <- as.double(campus_dp$salary)
+
+sapply(na.omit(campus[,sapply(campus, function(col) is.numeric(col))==T][,2:7]), function(col) summary(col))
 
 camp_selection <- function(col){
   campus_dp %>% 
