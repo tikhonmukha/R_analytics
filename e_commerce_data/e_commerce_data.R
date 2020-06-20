@@ -1,7 +1,7 @@
 library(data.table)
 library(stringr)
 library(ggplot2)
-
+library(ggrepel)
 
 orders_list <- fread("List of Orders.csv", na.strings = "")
 anyNA(orders_list)
@@ -83,10 +83,30 @@ ggplot(states_activity, aes(x = reorder(State, -Amount), y = Amount, fill = Amou
   guides(fill = guide_legend(title = NULL))+
   labs(title = "States purchase activity", x = "State", y = "Sales amount")
 
-ggplot(states_activity, aes(x = Amount, y = Profit, size = Amount))+
+ggplot(states_activity, aes(x = Amount, y = Profit, size = Quantity))+
+  geom_hline(yintercept=0, linetype="dashed", color = "red")+
   geom_point(aes(colour = State))+
+  geom_text_repel(aes(label = State), size = 3.25)+
   theme_minimal()+
   theme(legend.text = element_text(lineheight = .8), legend.key.height = unit(0.5, "cm"),
-        legend.position = "right", plot.title = element_text(hjust = 0.5))+
+        legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
   guides(fill = guide_legend(title = NULL))+
-  labs(title = "Amount-Profit correlation", x = "Sales amount", y = "Profit")
+  labs(title = "Revenue-Profit scatter plot", x = "Revenue", y = "Profit", size = "Transactions quantity")+
+  guides(colour = FALSE)
+
+states_dynamics <- orders_list[order_details_states]
+states_dynamics <- states_dynamics[,c(2,4,6)]
+states_dynamics$MonthYear <- format(as.Date(states_dynamics$OrderDate), "%Y-%m")
+states_dynamics <- states_dynamics[,.(Amount = sum(tot_amount)),
+                          by = c("State", "MonthYear")]
+states_dynamics$MonthYear <- as.factor(states_dynamics$MonthYear)
+
+ggplot(states_dynamics, aes(x = MonthYear, y = Amount, color = State))+
+  geom_line(aes(group = 1), size = 1.2)+
+  facet_wrap(~ State, scales = "free")+
+  theme_minimal()+
+  theme(legend.text = element_text(lineheight = .8), legend.key.height = unit(0.5, "cm"),
+        legend.position = "none", plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1, size = rel(0.95)))+
+  guides(fill = guide_legend(title = NULL))+
+  labs(title = "States revenue dynamics", x = "Period", y = "Revenue")
