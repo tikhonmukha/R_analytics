@@ -2,6 +2,7 @@ library(data.table)
 library(stringr)
 library(ggplot2)
 
+
 orders_list <- fread("List of Orders.csv", na.strings = "")
 anyNA(orders_list)
 orders_list <- na.omit(orders_list)
@@ -57,3 +58,35 @@ sales_target$month <- str_replace_all(sales_target$month, "Dec", "12")
 sales_target$OrderMonthYear <- sprintf("%s-%s", sales_target$month, sales_target$year)
 sales_target$month <- NULL
 sales_target$year <- NULL
+
+###Most sales active states
+
+order_details_states <- order_details[,1:4][,.(tot_amount = sum(Amount),
+                                                tot_profit = sum(Profit),
+                                                tot_quantity = sum(Quantity)),
+                                             by = OrderID]
+states <- orders_list[order_details_states]
+states <- states[,c(1,4:8)]
+states_activity <- states[,.(Amount = sum(tot_amount),
+           Profit = sum(tot_profit),
+           Quantity = sum(tot_quantity)),
+        by = State]
+setorder(states_activity, -Amount)
+
+ggplot(states_activity, aes(x = reorder(State, -Amount), y = Amount, fill = Amount))+
+  geom_col()+
+  scale_fill_distiller(palette = "Spectral")+
+  theme_minimal()+
+  theme(legend.text = element_text(lineheight = .8), legend.key.height = unit(1, "cm"),
+        legend.position = "none", plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))+
+  guides(fill = guide_legend(title = NULL))+
+  labs(title = "States purchase activity", x = "State", y = "Sales amount")
+
+ggplot(states_activity, aes(x = Amount, y = Profit, size = Amount))+
+  geom_point(aes(colour = State))+
+  theme_minimal()+
+  theme(legend.text = element_text(lineheight = .8), legend.key.height = unit(0.5, "cm"),
+        legend.position = "right", plot.title = element_text(hjust = 0.5))+
+  guides(fill = guide_legend(title = NULL))+
+  labs(title = "Amount-Profit correlation", x = "Sales amount", y = "Profit")
