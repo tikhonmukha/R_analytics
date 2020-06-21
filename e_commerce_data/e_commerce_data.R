@@ -2,6 +2,8 @@ library(data.table)
 library(stringr)
 library(ggplot2)
 library(ggrepel)
+library(maps)
+library(mapproj)
 
 orders_list <- fread("List of Orders.csv", na.strings = "")
 anyNA(orders_list)
@@ -96,7 +98,7 @@ ggplot(states_activity, aes(x = Amount, y = Profit, size = Quantity))+
 
 states_dynamics <- orders_list[order_details_states]
 states_dynamics <- states_dynamics[,c(2,4,6)]
-states_dynamics$MonthYear <- format(as.Date(states_dynamics$OrderDate), "%Y-%m")
+states_dynamics$MonthYear <- format(states_dynamics$OrderDate, "%Y-%m")
 states_dynamics <- states_dynamics[,.(Amount = sum(tot_amount)),
                           by = c("State", "MonthYear")]
 states_dynamics$MonthYear <- as.factor(states_dynamics$MonthYear)
@@ -110,3 +112,48 @@ ggplot(states_dynamics, aes(x = MonthYear, y = Amount, color = State))+
         axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1, size = rel(0.95)))+
   guides(fill = guide_legend(title = NULL))+
   labs(title = "States revenue dynamics", x = "Period", y = "Revenue")
+
+#Most revenuable cities
+
+map <- data.table(map_data("world"))[region == "India"]
+data <- data.table(world.cities)[country.etc == "India"]
+str(data)
+cities_dynamics <- orders_list[order_details_states]
+cities_dynamics <- cities_dynamics[,c(5,6)]
+cities_dynamics <- cities_dynamics[,.(Amount = sum(tot_amount)),
+                                   by = c("City")]
+
+cities <- data[cities_dynamics, on = .(name = City)]
+cities$name <- as.factor(cities$name)
+cities[name == "Ahmedabad"]$lat <- 23.03
+cities[name == "Ahmedabad"]$long <- 72.59
+cities[name == "Kolkata"]$lat <- 22.57
+cities[name == "Kolkata"]$long <- 88.36
+cities[name == "Kashmir"]$lat <- 34.08
+cities[name == "Kashmir"]$long <- 74.80
+cities[name == "Lucknow"]$lat <- 26.85
+cities[name == "Lucknow"]$long <- 80.95
+cities[name == "Gangtok"]$lat <- 27.34
+cities[name == "Gangtok"]$long <- 88.61
+cities[name == "Goa"]$lat <- 15.50
+cities[name == "Goa"]$long <- 73.83
+cities[name == "Simla"]$lat <- 31.10
+cities[name == "Simla"]$long <- 77.17
+cities[name == "Mumbai"]$lat <- 19.08
+cities[name == "Mumbai"]$long <- 72.88
+
+str(cities)
+
+ggplot() +
+  geom_polygon(data = map, aes(x=long, y = lat, group = group), fill="grey", alpha=0.5) +
+  geom_point(data= cities, aes(x=long, y=lat, color=name, size = Amount), na.rm = T) +
+  geom_text_repel(data = cities, aes(x=long, y=lat, label = name), size = 3.25) +
+  scale_fill_distiller(palette = "Spectral") +
+  scale_size_continuous(range=c(1,12)) +
+  theme_minimal() + 
+  theme(legend.text = element_text(lineheight = .8), legend.key.height = unit(0.5, "cm"),
+        legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
+  coord_map() +
+  guides(colour = FALSE) +
+  labs(title = "Most revenueable cities", x = "Longitude", y = "Latitude")
+
