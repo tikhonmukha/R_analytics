@@ -113,7 +113,7 @@ ggplot(states_dynamics, aes(x = MonthYear, y = Amount, color = State))+
   guides(fill = guide_legend(title = NULL))+
   labs(title = "States revenue dynamics", x = "Period", y = "Revenue")
 
-#Most revenuable cities
+###Most revenuable cities
 
 map <- data.table(map_data("world"))[region == "India"]
 data <- data.table(world.cities)[country.etc == "India"]
@@ -154,6 +154,65 @@ ggplot() +
   theme(legend.text = element_text(lineheight = .8), legend.key.height = unit(0.5, "cm"),
         legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
   coord_map() +
-  guides(colour = FALSE) +
+  guides(colour = FALSE, size = guide_legend(title = "Revenue")) +
   labs(title = "Most revenueable cities", x = "Longitude", y = "Latitude")
 
+#Cities cluster analysis
+
+cities_clusters <- orders_list[order_details_states]
+cities_clusters <- cities_clusters[,c(5,6,8)]
+cities_clusters <- cities_clusters[,.(Amount = sum(tot_amount),
+                                      Quantity = sum(tot_quantity)),
+                                   by = c("City")]
+cities_clusters_graph <- cities_clusters[,c(2,3)]
+fit_clust <- kmeans(cities_clusters_graph, 3)
+cities_clusters_graph$clusters <- factor(fit_clust$cluster)
+cities_clusters <- cbind(cities_clusters$City, cities_clusters_graph)
+setnames(cities_clusters, "V1", "City")
+
+ggplot(cities_clusters, aes(x = Amount, y = Quantity, col = clusters))+
+  geom_point(size = 2)+
+  geom_text_repel(aes(label = City), size = 3)+
+  theme_minimal()+
+  theme(legend.text = element_text(lineheight = .8), legend.key.height = unit(0.5, "cm"),
+        legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
+  scale_colour_discrete(labels = c("Most active", "Middle", "Less active"))+
+  labs(title = "Cities cluster plot", x = "Revenue", y = "Orders quantity")
+
+###Plan-fact
+
+order_details_planfact <- order_details[,1:5][,.(tot_amount = sum(Amount),
+                                               tot_profit = sum(Profit),
+                                               tot_quantity = sum(Quantity)),
+                                            by = c("OrderID", "Category")]
+planfact <- orders_list[order_details_planfact]
+planfact <- planfact[,c(1,2,6,7)]
+planfact <- planfact[,.(Amount = sum(tot_amount)),
+                          by = c("OrderDate", "Category")]
+planfact$Month <- format(planfact$OrderDate, "%m")
+planfact$Year <- format(planfact$OrderDate, "%Y")
+planfact$MonthYear <- str_c(planfact$Year, planfact$Month, sep = "-")
+planfact <- planfact[,c(6,2,3)]
+planfact <- planfact[,.(Fact = sum(Amount)),
+                     by = c("MonthYear", "Category")]
+planfact$MonthYear <- as.factor(planfact$MonthYear)
+
+sales_target$Month <- str_sub(sales_target$OrderMonthYear, 1, 2)
+sales_target$Year <- str_sub(sales_target$OrderMonthYear, 4, 7)
+sales_target$MonthYear <- str_c(sales_target$Year, sales_target$Month, sep = "-")
+sales_target <- sales_target[,c(6,2,3)]
+sales_target$MonthYear <- as.factor(sales_target$MonthYear)
+
+planfact <- planfact[sales_target, on = .(MonthYear = MonthYear, Category = Category)]
+planfact$difference <- planfact$Fact - planfact$Target
+planfact$color <- as.factor(ifelse(planfact$difference >= 0, 1, 0))
+
+str(planfact)
+
+ggplot(planfact, aes(x = MonthYear, y = difference, fill = color))+
+  geom_col()+
+  facet_wrap( ~ Category)+
+  theme_minimal()+
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90))+
+  labs(title = "Sales plan-fact report", x = "Period", y = "Sales plan implementation")
