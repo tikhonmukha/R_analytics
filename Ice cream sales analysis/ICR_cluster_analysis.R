@@ -91,10 +91,6 @@ ggplot(cluster_df, aes(x = VOLUME_SALES, y = VALUE_SALES, col = clusters))+
         legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
   labs(title = "K-means clustering", x = "Volume sales", y = "Value sales")
 
-cluster_df$clusters <- str_replace_all(cluster_df$clusters, "1", "Premium")
-cluster_df$clusters <- str_replace_all(cluster_df$clusters, "2", "Middle")
-cluster_df$clusters <- str_replace_all(cluster_df$clusters, "3", "Econom")
-
 cluster_df <- cluster_df %>% arrange(desc(VOLUME_SALES))
 
 #three-dimension plot
