@@ -1,6 +1,10 @@
 library(dplyr)
+library(tidyr)
 library(ggplot2)
+library(ggrepel)
 library(GGally)
+library(maps)
+library(mapproj)
 
 house <- read.csv("houses_to_rent_v2.csv", header = T, stringsAsFactors = T, encoding = "UTF-8")
 str(house)
@@ -53,6 +57,18 @@ ggplot(house_dp, aes(x = area, y = rent_amount))+
 
 house_dp_lm <- house_dp[c(1:8,10)]
 
+ggplot(house_dp_lm, aes(x = animal, y = rent_amount))+
+  geom_boxplot(aes(fill = animal))+
+  theme_minimal()+
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5))+
+  labs(title = "Rent amount from animal accept dependance", x = "Animal", y = "Rent amount")
+
+ggplot(house_dp_lm, aes(x = furniture, y = rent_amount))+
+  geom_boxplot(aes(fill = furniture))+
+  theme_minimal()+
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5))+
+  labs(title = "Rent amount from furniture dependance", x = "Furniture", y = "Rent amount")
+
 t.test(house_dp_lm$rent_amount ~ house_dp_lm$animal)
 
 t.test(house_dp_lm$rent_amount ~ house_dp_lm$furniture)
@@ -62,6 +78,36 @@ hist(house_dp_lm$rent_amount, main = "rent.amount",
 
 hist(log(house_dp_lm$rent_amount), main = "rent.amount", 
      breaks = 30, xlab = "ln(rent.amount)")
+
+ggplot(house_dp_lm, aes(x = city, y = rent_amount))+
+  geom_boxplot(aes(fill = city))+
+  theme_minimal()+
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5))+
+  labs(title = "Rent amount from city dependance", x = "City", y = "Rent amount")
+
+ggplot(house_dp_lm, aes(x = rooms, y = rent_amount))+
+  geom_boxplot(aes(fill = rooms))+
+  theme_minimal()+
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5))+
+  labs(title = "Rent amount from number of rooms dependance", x = "Number of rooms", y = "Rent amount")
+  
+ggplot(house_dp_lm, aes(x = bathroom, y = rent_amount))+
+  geom_boxplot(aes(fill = bathroom))+
+  theme_minimal()+
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5))+
+  labs(title = "Rent amount from number of bathrooms dependance", x = "Number of bathrooms", y = "Rent amount")
+
+ggplot(house_dp_lm, aes(x = parking_spaces, y = rent_amount))+
+  geom_boxplot(aes(fill = parking_spaces))+
+  theme_minimal()+
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5))+
+  labs(title = "Rent amount from number of parking spaces dependance", x = "Number of parking spaces", y = "Rent amount")
+
+ggplot(house_dp_lm, aes(x = floor, y = rent_amount))+
+  geom_boxplot(aes(fill = floor))+
+  theme_minimal()+
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5))+
+  labs(title = "Rent amount from floor number dependance", x = "Floor number", y = "Rent amount")
 
 fit_aov <- aov(rent_amount ~ city+rooms+bathroom+parking_spaces+floor, data = house_dp_lm)
 summary(fit_aov)
@@ -84,3 +130,52 @@ house_dp_lm_test$predicted_rent <- exp(predict(object = fit_lm, newdata = house_
 ggplot(house_dp_lm_test, aes(x = rent_amount, y = predicted_rent))+
   geom_point(size = 2)+
   geom_smooth(method = "lm")
+
+#Most expensive cities
+
+map <- tibble(map_data("world"))
+map <- map %>% 
+  filter(region == "Brazil")
+
+data <- tibble(world.cities)
+data <- data %>% 
+  filter(country.etc == "Brazil")
+
+house_map <- house_dp_lm %>% 
+  select(city, rent_amount) %>% 
+  group_by(city) %>% 
+  summarise(Rent_amount = median(rent_amount, na.rm = T)) %>% 
+  arrange(desc(Rent_amount))
+
+house_map <- left_join(house_map, data, by = c("city" = "name"))
+house_map$city <-  as.factor(house_map$city)
+house_map[1,]$lat <- -23.533773
+house_map[1,]$long <- -46.625290
+
+ggplot() +
+  geom_polygon(data = map, aes(x=long, y = lat, group = group), fill="grey", alpha=0.5) +
+  geom_point(data = house_map, aes(x=long, y=lat, color=city, size = Rent_amount), na.rm = T) +
+  geom_text_repel(data = house_map, aes(x=long, y=lat, label = city), size = 3.25) +
+  scale_fill_distiller(palette = "Spectral") +
+  scale_size_continuous(range=c(1,12)) +
+  theme_minimal() + 
+  theme(legend.text = element_text(lineheight = .8), legend.key.height = unit(0.5, "cm"),
+        legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
+  coord_map() +
+  guides(colour = FALSE, size = guide_legend(title = "Median rent amount")) +
+  labs(title = "Most expensive cities", x = "Longitude", y = "Latitude")
+
+#Most popular supply
+house_data <- gather(house_dp_lm, "index", "value", 3:8)
+house_data <- house_data %>% 
+  mutate(index = as.factor(index), value = as.factor(value))
+str(house_data)
+
+ggplot(house_data, aes(x = value))+
+  geom_bar(aes(fill = index))+
+  facet_wrap(~index, scales = "free")+
+  theme_minimal()+
+  theme(legend.text = element_text(lineheight = .8), legend.key.height = unit(0.5, "cm"),
+        legend.position = "bottom", plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1, size = rel(0.9)))+
+  guides(fill = FALSE)
