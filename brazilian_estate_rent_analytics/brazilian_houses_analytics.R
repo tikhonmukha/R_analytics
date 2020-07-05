@@ -5,6 +5,9 @@ library(ggrepel)
 library(GGally)
 library(maps)
 library(mapproj)
+library(lmtest)
+library(MASS)
+library(caret)
 
 house <- read.csv("houses_to_rent_v2.csv", header = T, stringsAsFactors = T, encoding = "UTF-8")
 str(house)
@@ -115,15 +118,11 @@ summary(fit_aov)
 0.8*nrow(house_dp_lm)
 house_dp_lm_train <- house_dp_lm[1:6500,]
 
-fit_lm <- lm(log(rent_amount) ~ area + city + rooms + bathroom + parking_spaces + floor + furniture, data = house_dp_lm_train)
+fit_lm <- lm(log(rent_amount) ~ area + city + (rooms * bathroom * parking_spaces) + floor + furniture, data = house_dp_lm_train)
 sum_fit_lm <- summary(fit_lm)
 sum_fit_lm$r.squared
 
 house_dp_lm_test <- house_dp_lm[6501:nrow(house_dp_lm),]
-
-house_dp_lm_test <- house_dp_lm_test %>% 
-  filter(as.integer(rooms) != 8 & as.integer(rooms) != 9) %>% 
-  filter(as.integer(bathroom) != 8)
 
 house_dp_lm_test$predicted_rent <- exp(predict(object = fit_lm, newdata = house_dp_lm_test, type = "response"))
 
@@ -166,7 +165,7 @@ ggplot() +
   labs(title = "Most expensive cities", x = "Longitude", y = "Latitude")
 
 #Most popular supply
-house_data <- gather(house_dp_lm, "index", "value", 3:8)
+house_data <- gather(house_dp_lm, "index", "value", c(3:5,7,8))
 house_data <- house_data %>% 
   mutate(index = as.factor(index), value = as.factor(value))
 str(house_data)
@@ -176,6 +175,49 @@ ggplot(house_data, aes(x = value))+
   facet_wrap(~index, scales = "free")+
   theme_minimal()+
   theme(legend.text = element_text(lineheight = .8), legend.key.height = unit(0.5, "cm"),
-        legend.position = "bottom", plot.title = element_text(hjust = 0.5),
-        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1, size = rel(0.9)))+
+        legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
   guides(fill = FALSE)
+
+house_data_floor <- gather(house_dp_lm, "index", "value", 6)
+house_data_floor <- house_data_floor %>% 
+  mutate(index = as.factor(index), value = as.integer(value))
+
+ggplot(house_data_floor, aes(x = value))+
+  geom_bar(aes(fill = index), na.rm = T)+
+  scale_x_continuous(limits = c(0,35), breaks = seq(0, 35, 1))+
+  theme_minimal()+
+  theme(legend.text = element_text(lineheight = .8), legend.key.height = unit(0.5, "cm"),
+        legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
+  guides(fill = FALSE)+
+  labs(x = "Floor number", y = "Count")
+
+#area-rent cluster analysis
+house_cluster <- house_dp_lm %>% 
+  select(area, rent_amount)
+
+fit_clust <- kmeans(house_cluster, 3)
+house_cluster$clusters <- factor(fit_clust$cluster)
+
+ggplot(house_cluster, aes(x = area, y = rent_amount, col = clusters))+
+  geom_point(size = 2)+
+  theme_minimal()+
+  theme(legend.text = element_text(lineheight = .8), legend.key.height = unit(0.5, "cm"),
+        legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
+  labs(title = "Houses cluster plot", x = "Rent amount", y = "Area")
+
+fit_cl <- lm(rent_amount ~ area, data = house_cluster)  
+bptest(fit_cl)
+rent_amount_bcmod <- BoxCoxTrans(house_cluster$rent_amount)
+house_cluster <- cbind(house_cluster, rent_new = predict(rent_amount_bcmod, house_cluster$rent_amount))
+
+ftl_cl_bcmod <- lm(rent_new ~ area, data = house_cluster)
+bptest(ftl_cl_bcmod)
+ggplot(house_cluster, aes(x = area, y = rent_new))+
+  geom_point(size = 2)
+
+area_bcmod <- BoxCoxTrans(house_cluster$area)
+house_cluster <- cbind(house_cluster, area_new = predict(area_bcmod, house_cluster$area))
+ftl_cl_bcmod2 <- lm(rent_new ~ area_new, data = house_cluster)
+bptest(ftl_cl_bcmod2)
+ggplot(house_cluster, aes(x = area_new, y = rent_new))+
+  geom_point(size = 2)
