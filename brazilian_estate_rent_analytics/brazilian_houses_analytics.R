@@ -9,13 +9,12 @@ library(lmtest)
 library(MASS)
 library(caret)
 
-house <- read.csv("houses_to_rent_v2.csv", header = T, stringsAsFactors = T, encoding = "UTF-8")
+house <- read.csv("houses_to_rent_v2.csv", header = T, stringsAsFactors = T, encoding = "UTF-8", na.strings = "-")
 str(house)
+house <- na.omit(house)
 
 house_dp <- tibble(house)
 house_dp <- house_dp %>% 
-  mutate(rooms = as.factor(rooms), bathroom = as.factor(bathroom), 
-         parking.spaces = as.factor(parking.spaces), floor = as.factor(floor)) %>% 
   rename("parking_spaces" = "parking.spaces", "homeowners_tax" = "hoa..R..",
          "rent_amount" = "rent.amount..R..", "property_tax" = "property.tax..R..", 
          "fire_insurance" = "fire.insurance..R..", "total_cost" = "total..R..")
@@ -40,12 +39,10 @@ plot(rent_amount ~ area,data = house_dp,pch=16)
 
 value_selection <- function(col){
   house_dp %>% 
-    select(col) %>% 
+    dplyr::select(col) %>% 
     mutate(index = as.factor(col)) %>% 
     rename("value" = col)
 }
-
-house_dp <- na.omit(house_dp)
 
 i1 <- value_selection("area")
 i2 <- value_selection("rent_amount")
@@ -58,29 +55,41 @@ ggplot(i, aes(x = index, y = value))+
 ggplot(house_dp, aes(x = area, y = rent_amount))+
   geom_point(size = 2)
 
-house_dp_lm <- house_dp[c(1:8,10)]
+levels(house_dp$city)
+house_dp$BeloHorizonte <- ifelse(house_dp$city == "Belo Horizonte", 1, 0)
+house_dp$Campinas <- ifelse(house_dp$city == "Campinas", 1, 0)
+house_dp$PortoAlegre <- ifelse(house_dp$city == "Porto Alegre", 1, 0)
+house_dp$Rio <- ifelse(house_dp$city == "Rio de Janeiro", 1, 0)
+house_dp$animalLog <- ifelse(house_dp$animal == "acept", 1, 0)
+house_dp$furnitureLog <- ifelse(house_dp$furniture == "furnished", 1, 0)
 
-ggplot(house_dp_lm, aes(x = animal, y = rent_amount))+
-  geom_boxplot(aes(fill = animal))+
+house_dp_lm <- house_dp[c(1,14:19,2:6,10)]
+house_dp_lm <- house_dp_lm %>% 
+  mutate_each(factor, BeloHorizonte, Campinas, PortoAlegre, Rio, animalLog, furnitureLog)
+
+ggplot(house_dp_lm, aes(x = animalLog, y = rent_amount))+
+  geom_boxplot(aes(fill = animalLog))+
   theme_minimal()+
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5))+
   labs(title = "Rent amount from animal accept dependance", x = "Animal", y = "Rent amount")
 
-ggplot(house_dp_lm, aes(x = furniture, y = rent_amount))+
-  geom_boxplot(aes(fill = furniture))+
+ggplot(house_dp_lm, aes(x = furnitureLog, y = rent_amount))+
+  geom_boxplot(aes(fill = furnitureLog))+
   theme_minimal()+
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5))+
   labs(title = "Rent amount from furniture dependance", x = "Furniture", y = "Rent amount")
 
-t.test(house_dp_lm$rent_amount ~ house_dp_lm$animal)
+t.test(house_dp_lm$rent_amount ~ house_dp_lm$animalLog)
 
-t.test(house_dp_lm$rent_amount ~ house_dp_lm$furniture)
+t.test(house_dp_lm$rent_amount ~ house_dp_lm$furnitureLog)
 
-hist(house_dp_lm$rent_amount, main = "rent.amount", 
-     breaks = 30, xlab = "rent.amount")
+t.test(house_dp_lm$rent_amount ~ house_dp_lm$BeloHorizonte)
 
-hist(log(house_dp_lm$rent_amount), main = "rent.amount", 
-     breaks = 30, xlab = "ln(rent.amount)")
+t.test(house_dp_lm$rent_amount ~ house_dp_lm$Campinas)
+
+t.test(house_dp_lm$rent_amount ~ house_dp_lm$PortoAlegre)
+
+t.test(house_dp_lm$rent_amount ~ house_dp_lm$Rio)
 
 ggplot(house_dp_lm, aes(x = city, y = rent_amount))+
   geom_boxplot(aes(fill = city))+
@@ -88,37 +97,47 @@ ggplot(house_dp_lm, aes(x = city, y = rent_amount))+
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5))+
   labs(title = "Rent amount from city dependance", x = "City", y = "Rent amount")
 
-ggplot(house_dp_lm, aes(x = rooms, y = rent_amount))+
-  geom_boxplot(aes(fill = rooms))+
+ggplot(house_dp_lm, aes(x = as.factor(rooms), y = rent_amount))+
+  geom_boxplot(aes(fill = as.factor(rooms)))+
   theme_minimal()+
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5))+
   labs(title = "Rent amount from number of rooms dependance", x = "Number of rooms", y = "Rent amount")
   
-ggplot(house_dp_lm, aes(x = bathroom, y = rent_amount))+
-  geom_boxplot(aes(fill = bathroom))+
+ggplot(house_dp_lm, aes(x = as.factor(bathroom), y = rent_amount))+
+  geom_boxplot(aes(fill = as.factor(bathroom)))+
   theme_minimal()+
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5))+
   labs(title = "Rent amount from number of bathrooms dependance", x = "Number of bathrooms", y = "Rent amount")
 
-ggplot(house_dp_lm, aes(x = parking_spaces, y = rent_amount))+
-  geom_boxplot(aes(fill = parking_spaces))+
+ggplot(house_dp_lm, aes(x = as.factor(parking_spaces), y = rent_amount))+
+  geom_boxplot(aes(fill = as.factor(parking_spaces)))+
   theme_minimal()+
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5))+
   labs(title = "Rent amount from number of parking spaces dependance", x = "Number of parking spaces", y = "Rent amount")
 
-ggplot(house_dp_lm, aes(x = floor, y = rent_amount))+
-  geom_boxplot(aes(fill = floor))+
+ggplot(house_dp_lm, aes(x = as.factor(floor), y = rent_amount))+
+  geom_boxplot(aes(fill = as.factor(floor)))+
   theme_minimal()+
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5))+
   labs(title = "Rent amount from floor number dependance", x = "Floor number", y = "Rent amount")
 
-fit_aov <- aov(rent_amount ~ city+rooms+bathroom+parking_spaces+floor, data = house_dp_lm)
+fit_aov <- aov(rent_amount ~ rooms+bathroom+parking_spaces+floor, data = house_dp_lm)
 summary(fit_aov)
+
+hist(house_dp_lm$rent_amount, main = "rent.amount", 
+     breaks = 30, xlab = "rent.amount")
+
+hist(log(house_dp_lm$rent_amount), main = "rent.amount", 
+     breaks = 30, xlab = "ln(rent.amount)")
+
+ggpairs(house_dp_lm[sapply(house_dp_lm, function(col) is.numeric(col))==T])+
+  theme(plot.title = element_text(hjust = 0.5))+
+  labs(title = "Correlation matrix")
 
 0.8*nrow(house_dp_lm)
 house_dp_lm_train <- house_dp_lm[1:6500,]
 
-fit_lm <- lm(log(rent_amount) ~ area + city + (rooms * bathroom * parking_spaces) + floor + furniture, data = house_dp_lm_train)
+fit_lm <- lm(log(rent_amount) ~ (BeloHorizonte + Campinas + PortoAlegre + Rio + area + rooms + bathroom + parking_spaces + floor + furnitureLog + animalLog)^2, data = house_dp_lm_train)
 sum_fit_lm <- summary(fit_lm)
 sum_fit_lm$r.squared
 
