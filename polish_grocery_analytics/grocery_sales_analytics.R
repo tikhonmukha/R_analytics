@@ -113,6 +113,42 @@ ggplot(monthly_sell_dp, aes(x = date, y = pur_netval, fill = group))+
         strip.text = element_text(size = rel(0.6)))+
   labs(title = "Categories sales dynamics", x = "", y = "Net purchase value")
 
+monthly_sell_dp$day <- weekdays.Date(monthly_sell_dp$date)
+
+monthly_sell_dp_daily_agg <- monthly_sell_dp %>% 
+  group_by(day = as.factor(day), date) %>% 
+  summarise(total_net_val = sum(pur_netval, na.rm = T))
+
+ggplot(monthly_sell_dp_daily_agg, aes(x = factor(day, weekdays(min(date) + 0:6)), y = total_net_val))+
+  geom_col()+
+  theme_minimal()+
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom",
+        axis.title.x = element_blank())+
+  labs(title = "Daily sells", y = "Total net value sales per day")
+
+monthly_sell_dp_daily <- monthly_sell_dp %>% 
+  group_by(group, day = as.factor(day), date) %>% 
+  summarise(total_net_val = sum(pur_netval, na.rm = T))
+
+monthly_sell_dp_daily_matrix <- monthly_sell_dp_daily %>% 
+  select(group, day, total_net_val) %>%
+  group_by(group, day) %>% 
+  summarise(total_net_val = sum(total_net_val, na.rm = T)) %>% 
+  spread(day, total_net_val) %>% 
+  select(1,4,3,6,8,5,7,2)
+
+ggplot(monthly_sell_dp_daily, aes(x = factor(day, weekdays(min(date) + 0:6)), y = group, fill = total_net_val))+
+  geom_tile()+
+  scale_fill_distiller(palette = "Spectral")+
+  theme_minimal()+
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom",
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_text(size = rel(0.8)),
+        legend.text = element_text(size = 8))+
+  labs(title = "Daily group sells", fill = "Total net sales value")
+  
 monthly_sell_dp_abc <- monthly_sell_dp %>% 
   group_by(name) %>% 
   summarise(total_net_val = sum(pur_netval, na.rm = T)) %>% 
