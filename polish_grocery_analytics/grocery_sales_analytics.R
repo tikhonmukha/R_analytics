@@ -157,7 +157,6 @@ monthly_sell_dp_abc <- monthly_sell_dp %>%
   mutate(value_share = total_net_val/sum(total_net_val)*100, 
          value_cum = cumsum(total_net_val),
          share_cum = cumsum(value_share),
-         number = seq(1:nrow(monthly_sell_dp_abc)),
          category_abc = as.factor(case_when(
            share_cum >= 0 & share_cum <= 80 ~ "A",
            share_cum > 80 & share_cum <= 95 ~ "B",
@@ -254,3 +253,24 @@ ggplot(monthly_sell_dp_abcxyz_graph, aes(x = category_abc, y = category_xyz, fil
   theme_minimal()+
   theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")+
   labs(title = "ABC XYZ analysis", x = "", y = "")
+
+monthly_sell_dp_sku <- monthly_sell_dp %>% 
+  select(name, pur_netval, margin) %>% 
+  group_by(name) %>% 
+  summarise(total_net_val = sum(pur_netval, na.rm = T), margin = mean(margin, na.rm = T)) %>% 
+  arrange(desc(total_net_val)) %>% 
+  mutate(value_share = total_net_val/sum(total_net_val)*100, 
+         cum_value_share = cumsum(value_share))
+
+monthly_sell_dp_sku <- mutate(monthly_sell_dp_sku, sku_num = seq(1, nrow(monthly_sell_dp_sku), 1))
+monthly_sell_dp_sku$eighty_percent <- 495
+monthly_sell_dp_sku$nintyfive_percent <- 2110
+
+ggplot(monthly_sell_dp_sku, aes(x = sku_num, y = cum_value_share))+
+  geom_line(color = "red", size = 1.25)+
+  geom_col(aes(x = sku_num, y = margin), color = "blue")+
+  geom_vline(xintercept = 495, linetype="dashed", 
+             color = "red", size=1.1)+
+  geom_vline(xintercept = 2110, linetype="dashed", 
+             color = "red", size=1.1)+
+  theme_minimal()
