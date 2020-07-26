@@ -5,13 +5,19 @@ library(GGally)
 
 campus <- read.csv("Placement_Data_Full_Class.csv", header = T, stringsAsFactors = T, na.strings = "")
 head(campus)
+str(campus)
 
 campus_dp <- as_tibble(campus)
 campus_dp$salary <- as.double(campus_dp$salary)
 
 sapply(na.omit(campus[,sapply(campus, function(col) is.numeric(col))==T][,2:7]), function(col) summary(col))
 
+ggpairs(na.omit(campus[sapply(campus, function(col) is.numeric(col))==T][,2:7]))+
+  theme(plot.title = element_text(hjust = 0.5))+
+  labs(title = "Correlation matrix")
+
 camp_selection <- function(col){
+  library(dplyr)
   campus_dp %>% 
     select(col, status) %>% 
     mutate("index" = as.factor(col)) %>% 
@@ -84,64 +90,17 @@ campus_chisq_dp$important <- ifelse(campus_chisq_dp$p_value >= 0.05, "No", "Yes"
 
 campus_chisq_dp
 
-campus_dp$status_log <- ifelse(campus_dp$status == "Not Placed", 0, 1)
+campus_dp$status_log <- as.factor(ifelse(campus_dp$status == "Not Placed", 0, 1))
 
 levels(campus_dp$workex)
 levels(campus_dp$specialisation)
 
-campus_dp$workex_log <- ifelse(campus_dp$workex == "No", 0, 1)
+campus_dp$workex_log <- as.factor(ifelse(campus_dp$workex == "No", 0, 1))
 
-campus_dp$specialisation_log <- ifelse(campus_dp$specialisation == "Mkt&Fin", 0, 1)
+campus_dp$specialisation_log <- as.factor(ifelse(campus_dp$specialisation == "Mkt&Fin", 0, 1))
 
 
 #logistic regression with ssc_p, hsc_p, degree_p, workex, specialisation
-
-fit <- glm(status_log ~ ssc_p + hsc_p + degree_p + workex_log + specialisation_log, data = campus_dp, family = "binomial")
-summary(fit)
-fit$residuals
-plot(fit$residuals)
-fit$linear.predictors
-
-predict.glm(object = fit, type = "response")
-campus_dp$status
-
-table(ifelse(predict.glm(object = fit, type = "response") >= 0.5, "Placed", "Not Placed"))
-table(campus_dp$status)
-
-campus_dp$probability <- predict.glm(object = fit, type = "response")
-campus_dp$predictors <- fit$linear.predictors
-
-ggplot(data = campus_dp ,aes(x = predictors, y = probability))+
-  geom_hline(yintercept=0.5, linetype="dashed", color = "red", size = 1.5)+
-  geom_point(colour = "blue")+
-  labs(title="Placement probability")+
-  theme_minimal()+
-  theme(plot.title = element_text(hjust = 0.5))+
-  scale_x_continuous(limits = c(-9, 9), breaks = seq(-9, 9, by = 3))
-
-#Salary linear regression
-
-camp_selection_ttest <- function(col){
-  ttest <- campus_dp %>% 
-    select(col, salary) %>% 
-    rename("value" = col)
-  t.test(salary ~ value, data = ttest)$p.value
-}
-
-s1 <- camp_selection_ttest("gender")
-s2 <- camp_selection_ttest("ssc_b")
-s3 <- camp_selection_ttest("hsc_b")
-s4 <- summary(aov(salary ~ hsc_s, data = campus_dp))[[1]][[1, "Pr(>F)"]]
-s5 <- summary(aov(salary ~ degree_t, data = campus_dp))[[1]][[1, "Pr(>F)"]]
-s6 <- camp_selection_ttest("workex")
-s7 <- camp_selection_ttest("specialisation")
-
-campus_salary_dp <- tibble(data_frame("index" = c("gender", "ssc_b", "hsc_b", "hsc_s", "degree_t",
-                                                    "workex", "specialisation"), "p_value" = c(s1, s2, s3, s4, s5, s6, s7)))
-
-campus_salary_dp$important <- ifelse(campus_salary_dp$p_value >= 0.05, "No", "Yes")
-
-campus_salary_dp
 
 ggplot(campus_dp_boxplot, aes(x = value, fill = index))+
   geom_histogram(colour = "black", na.rm = T)+
@@ -157,10 +116,12 @@ ggplot(campus_dp_boxplot, aes(x = value, fill = index))+
   guides(fill = guide_legend(title = NULL))+
   labs(title = "Indexes distribution")
 
+
 shapiro.test(campus_dp$ssc_p^1.28)
 shapiro.test(campus_dp$hsc_p^0.77)
 shapiro.test(campus_dp$etest_p^(0.9))
 shapiro.test(campus_dp$salary^(-2))
+
 
 campus_dp_ssc_p2 <- camp_selection("ssc_p")
 campus_dp_ssc_p2$value <- campus_dp_ssc_p2$value^1.28
@@ -188,26 +149,48 @@ ggplot(campus_dp_boxplot2, aes(x = value, fill = index))+
   guides(fill = guide_legend(title = NULL))+
   labs(title = "Indexes normal distribution")
 
-campus_dp$gender_log <- ifelse(campus_dp$gender == "F", 0, 1)
 
-campus_dp_lm <- campus_dp[complete.cases(campus_dp), ]
-campus_dp_lm$ssc_p <- campus_dp_lm$ssc_p^1.28
-campus_dp_lm$hsc_p <- campus_dp_lm$hsc_p^0.77
-campus_dp_lm$etest_p <- campus_dp_lm$etest_p^0.9
-campus_dp_lm$salary <- campus_dp_lm$salary^(-2)
+campus_dp$ssc_p <- campus_dp$ssc_p^1.28
+campus_dp$hsc_p <- campus_dp$hsc_p^0.77
 
-fit <- lm(salary ~ gender_log + ssc_p + hsc_p + degree_p + etest_p + specialisation_log, data = campus_dp_lm)
+campus_dp_train <- campus_dp[1:170,]
+
+fit <- glm(status_log ~ ssc_p + hsc_p + degree_p + workex_log + specialisation_log, data = campus_dp_train, 
+           family = "binomial"(link = "logit"), x = T)
 summary(fit)
-optimal_fit <- step(fit, direction = "backward")
+vcov(fit)
+table(ifelse(predict.glm(object = fit, type = "response") >= 0.5, "Placed", "Not Placed"))
+pr_campus <- predict(fit, campus_dp_train, se=T)
+campus_dp_train <- cbind(campus_dp_train, pr_campus)
+campus_dp_train <- mutate(campus_dp_train, prob = plogis(fit), 
+                     left_ci = plogis(fit - 1.96 * se.fit),
+                     right_ci = plogis(fit + 1.96 * se.fit))
+roc.data <- AUC::roc(campus_dp_train$prob, campus_dp_train$status_log)
 
-fit_opt <- lm(salary ~ gender_log + etest_p, data = campus_dp_lm)
-summary(fit_opt)
-fit_opt$fitted.values^(-0.5)
-campus_dp[complete.cases(campus_dp),]$salary
+qplot(x = roc.data$cutoffs, y = roc.data$tpr, geom = "line")
+qplot(x = roc.data$cutoffs, y = roc.data$fpr, geom = "line")
 
-ggplot(data = fit_opt, aes(x = fit_opt$fitted.values^(-0.5), y = fit_opt$residuals^(-0.5)))+
-  geom_point()+
-  geom_smooth(method = lm, size = 1, color = "blue")+
+qplot(x = roc.data$fpr, y = roc.data$tpr, geom = "line")
+
+campus_dp_train$prob_if <- ifelse(campus_dp_train$prob >= 0.4, 1, 0)
+
+table(ifelse(campus_dp_train$prob_if == campus_dp_train$status_log, "Yes", "No"))
+
+
+campus_dp_train$probability <- predict.glm(object = fit, type = "response")
+campus_dp_train$predictors <- fit$linear.predictors
+
+ggplot(data = campus_dp_train ,aes(x = fit, y = prob))+
+  geom_hline(yintercept=0.5, linetype="dashed", color = "red", size = 1.5)+
+  geom_point(colour = "blue")+
+  labs(title="Placement probability")+
   theme_minimal()+
   theme(plot.title = element_text(hjust = 0.5))+
-  labs(x = "Predicted salary", y = "Model residuals", title = "Salary linear model")
+  scale_x_continuous(limits = c(-9, 9), breaks = seq(-9, 9, by = 3))
+
+campus_dp_test <- campus_dp[190:215,]
+pr_campus_test <- predict(fit, campus_dp_test, se = T)
+campus_dp_test <- cbind(campus_dp_test, pr_campus_test)
+campus_dp_test <- mutate(campus_dp_test, prob = plogis(fit))
+campus_dp_test$prob_if <- ifelse(campus_dp_test$prob >= 0.4, 1, 0)
+table(ifelse(campus_dp_test$prob_if == campus_dp_test$status_log, "Yes", "No"))
