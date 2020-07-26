@@ -176,9 +176,17 @@ campus_dp_train$prob_if <- ifelse(campus_dp_train$prob >= 0.4, 1, 0)
 
 table(ifelse(campus_dp_train$prob_if == campus_dp_train$status_log, "Yes", "No"))
 
+ggplot(data = campus_dp_train, aes(ssc_p, prob)) +
+  geom_line()+
+  geom_ribbon(aes(ymin = left_ci, ymax = right_ci), alpha = 0.2)
 
-campus_dp_train$probability <- predict.glm(object = fit, type = "response")
-campus_dp_train$predictors <- fit$linear.predictors
+ggplot(data = campus_dp_train, aes(hsc_p, prob)) +
+  geom_line()+
+  geom_ribbon(aes(ymin = left_ci, ymax = right_ci), alpha = 0.2)
+
+ggplot(data = campus_dp_train, aes(degree_p, prob)) +
+  geom_line()+
+  geom_ribbon(aes(ymin = left_ci, ymax = right_ci), alpha = 0.2)
 
 ggplot(data = campus_dp_train ,aes(x = fit, y = prob))+
   geom_hline(yintercept=0.5, linetype="dashed", color = "red", size = 1.5)+
