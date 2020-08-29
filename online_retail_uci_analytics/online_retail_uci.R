@@ -73,3 +73,62 @@ ggplot(data_goods, aes(x = reorder(Description, -share_per_country), y = share_p
        fill = "Market share value")
 
 #топ-20 скю исключая сезонные и новинки, abc и xyz анализ
+data_goods_adj <- data[,c(3,5,9)]
+data_goods_adj$yearmonth <- format(data_goods_adj$InvoiceDate, "%Y-%m")
+data_goods_adj_agg <- dcast(data_goods_adj, Description ~ as.character(yearmonth), fun.aggregate = sum, value.var = c("ValueSales"))                                    
+data_goods_adj_agg$value_sales <- apply(data_goods_adj_agg[,2:ncol(data_goods_adj_agg)],1,sum)
+
+data_goods_adj_agg$new <- ifelse(apply(data_goods_adj_agg[,2:25],1,sum) == 0, 1, 0)
+table(data_goods_adj_agg$new)
+
+data_goods_adj_agg$spring <- ifelse(apply(data_goods_adj_agg[,c(5:7,17:19)],1,sum) > 0 &
+                                      apply(data_goods_adj_agg[,-c(1,5:7,17:19)],1,sum) == 0, 1, 0)
+table(data_goods_adj_agg$spring)
+
+data_goods_adj_agg$summer <- ifelse(apply(data_goods_adj_agg[,c(8:10,20:22)],1,sum) > 0 &
+                                      apply(data_goods_adj_agg[,-c(1,8:10,20:22)],1,sum) == 0, 1, 0)
+table(data_goods_adj_agg$summer)
+
+data_goods_adj_agg$autumn <- ifelse(apply(data_goods_adj_agg[,c(11:13,23:25)],1,sum) > 0 &
+                                      apply(data_goods_adj_agg[,-c(1,11:13,23:25)],1,sum) == 0, 1, 0)
+table(data_goods_adj_agg$autumn)
+
+data_goods_adj_agg$winter <- ifelse(apply(data_goods_adj_agg[,c(2:4,14:16,26)],1,sum) > 0 &
+                                      apply(data_goods_adj_agg[,-c(1:4,14:16,26)],1,sum) == 0, 1, 0)
+table(data_goods_adj_agg$winter)
+
+data_goods_adj_agg$empty_months <- ifelse(apply(data_goods_adj_agg[,-c(1,27:32)],1, function(x) sum(x == 0)) > 19, 1, 0)
+table(data_goods_adj_agg$empty_months)
+
+ncol(data_goods_adj_agg)
+
+data_goods_abcxyz <- data_goods_adj_agg[new != 1,][spring != 1,][summer != 1,][autumn != 1,][winter != 1,][empty_months != 1,][value_sales >= 0,c(1:27)]
+setorder(data_goods_abcxyz, -value_sales)
+
+data_goods_abcxyz$value_share <- data_goods_abcxyz$value_sales/sum(data_goods_abcxyz$value_sales)*100
+data_goods_abcxyz$cumsum_share <- cumsum(data_goods_abcxyz$value_share)      
+data_goods_abcxyz$variation <- (apply(data_goods_abcxyz[,c(2:26)],1,sd)/apply(data_goods_abcxyz[,c(2:26)],1,mean))*100
+
+data_goods_abcxyz$abc_group <- ifelse(data_goods_abcxyz$cumsum_share <= 80, "A", 
+                                      ifelse(data_goods_abcxyz$cumsum_share > 80 & data_goods_abcxyz$cumsum_share <= 95, 
+                                             "B", "C"))
+table(data_goods_abcxyz$abc_group)
+data_goods_abcxyz$xyz_group <- ifelse(data_goods_abcxyz$variation <= 10, "X", 
+                                      ifelse(data_goods_abcxyz$variation > 10 & data_goods_abcxyz$variation <= 25, 
+                                             "Y", "Z"))
+table(data_goods_abcxyz$xyz_group)
+table(data_goods_abcxyz$abc_group, data_goods_abcxyz$xyz_group)
+
+data_goods_abcxyz$abcxyz_group <- str_c(data_goods_abcxyz$abc_group, 
+                                        data_goods_abcxyz$xyz_group, sep = "")
+
+ggplot(data_goods_abcxyz, aes(x = variation, y = value_share, colour = abcxyz_group))+
+  geom_point(alpha = I(0.5))+
+  theme_minimal()+
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")+
+  labs(title = "ABC-XYZ analysis", x = "Variation coefficient, %", 
+       y = "SKU market share, %", colour = "SKU group")
+
+data_goods_AZ <- data_goods_abcxyz[abcxyz_group == "AZ", -c(31:33)]
+
+#drilling into AZ group: top sku with min variation, putting them into groups, then pivot table into long format & variation boxplots for top 20-30 sku, months dynamics sells for top 20-30 sku
