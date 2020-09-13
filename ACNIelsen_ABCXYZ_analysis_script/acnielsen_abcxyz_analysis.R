@@ -87,8 +87,8 @@ data_abcxyz_pure <- data_abcxyz_pure %>%
 data_abcxyz_pure_ABCgroups <- data_abcxyz_pure %>% 
   group_by(category_abc) %>% 
   summarise(value_share = sum(value_share)) %>% 
-  mutate(manufacturer = factor(c("all"))) %>% 
-  select(c(3,1,2))
+  mutate(manufacturer = factor(c("all")), value_cumsum = cumsum(value_share)) %>% 
+  select(c(3,1,2,4))
 
 data_abcxyz_pure_ABCour <- data_abcxyz_pure %>% 
   filter(manufacturer == "SAVUSHKIN PRODUCT" | manufacturer == "SANTA BREMOR") %>% 
@@ -97,11 +97,13 @@ data_abcxyz_pure_ABCour <- data_abcxyz_pure %>%
   mutate(manufacturer = factor(c("we"))) %>% 
   select(c(3,1,2))
 
-data_abcxyz_pure_ABC <- rbind(data_abcxyz_pure_ABCgroups, data_abcxyz_pure_ABCour)
-
-ggplot(data_abcxyz_pure_ABC, aes(x = category_abc, y = value_share, fill = manufacturer, label = round(value_share, digits = 1))) +
-  geom_col(position = "dodge")+
+ggplot(data_abcxyz_pure_ABCgroups, aes(x = category_abc, y = value_share, label = round(value_share, digits = 1))) +
+  geom_col(fill = "navy")+
+  geom_col(data = data_abcxyz_pure_ABCour, aes(x = category_abc, y = value_share), width = 0.75, fill = "blue")+
+  geom_line(data = data_abcxyz_pure_ABCgroups, aes(x = category_abc, y = value_cumsum, group = manufacturer), linetype = "dashed", size = 1, colour = "red")+
   geom_text(position = position_dodge(width= 0.9), angle=0, vjust=-1, hjust=0.5)+
+  geom_text(data = data_abcxyz_pure_ABCour, aes(label = round(value_share, digits = 1)), vjust = -1, colour = "white")+
+  annotate("text", x = "B", y = 75, label = "Представлены доля\n всего рынка и доля\n Савушкин продукт", size = 3)+
   theme_minimal()+
   theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
   guides(fill = guide_legend(title = NULL))+
@@ -137,8 +139,8 @@ ggplot(data_abcxyz_pure_ABCbrands, aes(x = brand, y = sku_count, fill = category
 data_abcxyz_pure_XYZgroups <- data_abcxyz_pure %>% 
   group_by(category_xyz) %>% 
   summarise(value_share = sum(value_share)) %>% 
-  mutate(manufacturer = factor(c("all"))) %>% 
-  select(c(3,1,2))
+  mutate(manufacturer = factor(c("all")), value_cumsum = cumsum(value_share)) %>% 
+  select(c(3,1,2,4))
 
 data_abcxyz_pure_XYZour <- data_abcxyz_pure %>% 
   filter(manufacturer == "SAVUSHKIN PRODUCT" | manufacturer == "SANTA BREMOR") %>% 
@@ -147,11 +149,13 @@ data_abcxyz_pure_XYZour <- data_abcxyz_pure %>%
   mutate(manufacturer = factor(c("we"))) %>% 
   select(c(3,1,2))
 
-data_abcxyz_pure_XYZ <- rbind(data_abcxyz_pure_XYZgroups, data_abcxyz_pure_XYZour)
-
-ggplot(data_abcxyz_pure_XYZ, aes(x = category_xyz, y = value_share, fill = manufacturer, label = round(value_share, digits = 1))) +
-  geom_col(position = "dodge")+
+ggplot(data_abcxyz_pure_XYZgroups, aes(x = category_xyz, y = value_share, label = round(value_share, digits = 1))) +
+  geom_col(fill = "navy")+
+  geom_col(data = data_abcxyz_pure_XYZour, aes(x = category_xyz, y = value_share), width = 0.75, fill = "blue")+
+  geom_line(data = data_abcxyz_pure_XYZgroups, aes(x = category_xyz, y = value_cumsum, group = manufacturer), linetype = "dashed", size = 1, colour = "red")+
   geom_text(position = position_dodge(width= 0.9), angle=0, vjust=-1, hjust=0.5)+
+  geom_text(data = data_abcxyz_pure_XYZour, aes(label = round(value_share, digits = 1)), vjust = -1, colour = "white")+
+  annotate("text", x = "X", y = 75, label = "Представлены доля\n всего рынка и доля\n Савушкин продукт", size = 3)+
   theme_minimal()+
   theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
   guides(fill = guide_legend(title = NULL))+
@@ -186,8 +190,8 @@ ggplot(data_abcxyz_pure_XYZbrands, aes(x = brand, y = sku_count, fill = category
 data_abcxyz_pure_ABCXYZgroups <- data_abcxyz_pure %>% 
   group_by(category_abcxyz) %>% 
   summarise(value_share = sum(value_share)) %>% 
-  mutate(manufacturer = factor(c("all"))) %>% 
-  select(c(3,1,2))
+  mutate(manufacturer = factor(c("all")), value_cumsum = cumsum(value_share)) %>% 
+  select(c(3,1,2,4))
 
 data_abcxyz_pure_ABCXYZour <- data_abcxyz_pure %>% 
   filter(manufacturer == "SAVUSHKIN PRODUCT" | manufacturer == "SANTA BREMOR") %>% 
@@ -196,11 +200,13 @@ data_abcxyz_pure_ABCXYZour <- data_abcxyz_pure %>%
   mutate(manufacturer = factor(c("we"))) %>% 
   select(c(3,1,2))
 
-data_abcxyz_pure_ABCXYZ <- rbind(data_abcxyz_pure_ABCXYZgroups, data_abcxyz_pure_ABCXYZour)
-
-ggplot(data_abcxyz_pure_ABCXYZ, aes(x = category_abcxyz, y = value_share, fill = manufacturer, label = round(value_share, digits = 1))) +
-  geom_col(position = "dodge")+
+ggplot(data_abcxyz_pure_ABCXYZgroups, aes(x = category_abcxyz, y = value_share, label = round(value_share, digits = 1))) +
+  geom_col(fill = "navy")+
+  geom_col(data = data_abcxyz_pure_ABCXYZour, aes(x = category_abcxyz, y = value_share), width = 0.75, fill = "blue")+
+  geom_line(data = data_abcxyz_pure_ABCXYZgroups, aes(x = category_abcxyz, y = value_cumsum, group = manufacturer), linetype = "dashed", size = 1, colour = "red")+
   geom_text(position = position_dodge(width= 0.9), angle=0, vjust=-1, hjust=0.5)+
+  geom_text(data = data_abcxyz_pure_ABCXYZour, aes(label = round(value_share, digits = 1)), vjust = 0, colour = "red")+
+  annotate("text", x = "BZ", y = 75, label = "Представлены доля\n всего рынка и доля\n Савушкин продукт", size = 3)+
   theme_minimal()+
   theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
   guides(fill = guide_legend(title = NULL))+
