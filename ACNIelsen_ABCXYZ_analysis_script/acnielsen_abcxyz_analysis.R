@@ -84,6 +84,49 @@ data_abcxyz_pure <- data_abcxyz_pure %>%
 
 #ABC analysis
 
+data_abcxyz_pure_ABCstructure_all <- data_abcxyz_pure %>% 
+  group_by(category_abc) %>% 
+  summarise(sku_count = n()) %>% 
+  mutate(manufacturer = factor(c("all")), sku_value = sku_count/sum(sku_count)*100) %>% 
+  select(c(3,1,2,4))
+
+data_abcxyz_pure_ABCstructure_all$ymax <- cumsum(data_abcxyz_pure_ABCstructure_all$sku_value)
+data_abcxyz_pure_ABCstructure_all$ymin <- c(0, head(data_abcxyz_pure_ABCstructure_all$ymax, n=-1))
+data_abcxyz_pure_ABCstructure_all$labelPosition <- (data_abcxyz_pure_ABCstructure_all$ymax + data_abcxyz_pure_ABCstructure_all$ymin) / 2
+data_abcxyz_pure_ABCstructure_all$label <- paste0(data_abcxyz_pure_ABCstructure_all$category_abc, "\n доля: ", round(data_abcxyz_pure_ABCstructure_all$sku_value, digits = 1))
+
+ggplot(data_abcxyz_pure_ABCstructure_all, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=category_abc)) +
+  geom_rect() +
+  geom_label(x=3.5, aes(y=labelPosition, label=label), size=6) +
+  scale_fill_brewer(palette=1) +
+  coord_polar(theta="y") +
+  xlim(c(2, 4)) +
+  theme_void() +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5)) +
+  labs(title = "Структура рынка в разрезе групп")
+
+data_abcxyz_pure_ABCstructure_our <- data_abcxyz_pure %>% 
+  filter(manufacturer == "SAVUSHKIN PRODUCT" | manufacturer == "SANTA BREMOR") %>% 
+  group_by(category_abc) %>% 
+  summarise(sku_count = n()) %>% 
+  mutate(manufacturer = factor(c("all")), sku_value = sku_count/sum(sku_count)*100) %>% 
+  select(c(3,1,2,4))
+
+data_abcxyz_pure_ABCstructure_our$ymax <- cumsum(data_abcxyz_pure_ABCstructure_our$sku_value)
+data_abcxyz_pure_ABCstructure_our$ymin <- c(0, head(data_abcxyz_pure_ABCstructure_our$ymax, n=-1))
+data_abcxyz_pure_ABCstructure_our$labelPosition <- (data_abcxyz_pure_ABCstructure_our$ymax + data_abcxyz_pure_ABCstructure_our$ymin) / 2
+data_abcxyz_pure_ABCstructure_our$label <- paste0(data_abcxyz_pure_ABCstructure_our$category_abc, "\n доля: ", round(data_abcxyz_pure_ABCstructure_our$sku_value, digits = 1))
+
+ggplot(data_abcxyz_pure_ABCstructure_our, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=category_abc)) +
+  geom_rect() +
+  geom_label(x=3.5, aes(y=labelPosition, label=label), size=6) +
+  scale_fill_brewer(palette=1) +
+  coord_polar(theta="y") +
+  xlim(c(2, 4)) +
+  theme_void() +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5)) +
+  labs(title = "Структура Савушкин продукт в разрезе групп")
+
 data_abcxyz_pure_ABCgroups <- data_abcxyz_pure %>% 
   group_by(category_abc) %>% 
   summarise(value_share = sum(value_share)) %>% 
@@ -102,7 +145,7 @@ ggplot(data_abcxyz_pure_ABCgroups, aes(x = category_abc, y = value_share, label 
   geom_col(data = data_abcxyz_pure_ABCour, aes(x = category_abc, y = value_share), width = 0.75, fill = "blue")+
   geom_line(data = data_abcxyz_pure_ABCgroups, aes(x = category_abc, y = value_cumsum, group = manufacturer), linetype = "dashed", size = 1, colour = "red")+
   geom_text(position = position_dodge(width= 0.9), angle=0, vjust=-1, hjust=0.5)+
-  geom_text(data = data_abcxyz_pure_ABCour, aes(label = round(value_share, digits = 1)), vjust = -1, colour = "white")+
+  geom_text(data = data_abcxyz_pure_ABCour, aes(label = round(value_share, digits = 1)), vjust = -1, colour = "red")+
   annotate("text", x = "B", y = 75, label = "Представлены доля\n всего рынка и доля\n Савушкин продукт", size = 3)+
   theme_minimal()+
   theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
@@ -128,13 +171,56 @@ ggplot(data_abcxyz_pure_ABCbrands, aes(x = brand, y = sku_count, fill = category
   geom_col(position = "dodge")+
   geom_text(position = position_dodge(width= 0.9), angle=0, vjust=-1, hjust=0.5)+
   scale_y_continuous(limits = c(0, 30))+
-  scale_fill_brewer()+
+  scale_fill_brewer(palette = 1)+
   theme_minimal()+
   theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
   guides(fill = guide_legend(title = NULL))+
   labs(title = "Количество SKU Савушкин продукт по брендам", x = "", y = "")
 
 #XYZ analysis
+
+data_abcxyz_pure_XYZstructure_all <- data_abcxyz_pure %>% 
+  group_by(category_xyz) %>% 
+  summarise(sku_count = n()) %>% 
+  mutate(manufacturer = factor(c("all")), sku_value = sku_count/sum(sku_count)*100) %>% 
+  select(c(3,1,2,4))
+
+data_abcxyz_pure_XYZstructure_all$ymax <- cumsum(data_abcxyz_pure_XYZstructure_all$sku_value)
+data_abcxyz_pure_XYZstructure_all$ymin <- c(0, head(data_abcxyz_pure_XYZstructure_all$ymax, n=-1))
+data_abcxyz_pure_XYZstructure_all$labelPosition <- (data_abcxyz_pure_XYZstructure_all$ymax + data_abcxyz_pure_XYZstructure_all$ymin) / 2
+data_abcxyz_pure_XYZstructure_all$label <- paste0(data_abcxyz_pure_XYZstructure_all$category_xyz, "\n доля: ", round(data_abcxyz_pure_XYZstructure_all$sku_value, digits = 1))
+
+ggplot(data_abcxyz_pure_XYZstructure_all, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=category_xyz)) +
+  geom_rect() +
+  geom_label(x=3.5, aes(y=labelPosition, label=label), size=6) +
+  scale_fill_brewer(palette=1) +
+  coord_polar(theta="y") +
+  xlim(c(2, 4)) +
+  theme_void() +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5)) +
+  labs(title = "Структура рынка в разрезе групп")
+
+data_abcxyz_pure_XYZstructure_our <- data_abcxyz_pure %>% 
+  filter(manufacturer == "SAVUSHKIN PRODUCT" | manufacturer == "SANTA BREMOR") %>% 
+  group_by(category_xyz) %>% 
+  summarise(sku_count = n()) %>% 
+  mutate(manufacturer = factor(c("all")), sku_value = sku_count/sum(sku_count)*100) %>% 
+  select(c(3,1,2,4))
+
+data_abcxyz_pure_XYZstructure_our$ymax <- cumsum(data_abcxyz_pure_XYZstructure_our$sku_value)
+data_abcxyz_pure_XYZstructure_our$ymin <- c(0, head(data_abcxyz_pure_XYZstructure_our$ymax, n=-1))
+data_abcxyz_pure_XYZstructure_our$labelPosition <- (data_abcxyz_pure_XYZstructure_our$ymax + data_abcxyz_pure_XYZstructure_our$ymin) / 2
+data_abcxyz_pure_XYZstructure_our$label <- paste0(data_abcxyz_pure_XYZstructure_our$category_xyz, "\n доля: ", round(data_abcxyz_pure_XYZstructure_our$sku_value, digits = 1))
+
+ggplot(data_abcxyz_pure_XYZstructure_our, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=category_xyz)) +
+  geom_rect() +
+  geom_label(x=3.5, aes(y=labelPosition, label=label), size=6) +
+  scale_fill_brewer(palette=1) +
+  coord_polar(theta="y") +
+  xlim(c(2, 4)) +
+  theme_void() +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5)) +
+  labs(title = "Структура Савушкин продукт в разрезе групп")
 
 data_abcxyz_pure_XYZgroups <- data_abcxyz_pure %>% 
   group_by(category_xyz) %>% 
@@ -179,7 +265,7 @@ data_abcxyz_pure_XYZbrands <- rbind(data_abcxyz_pure_XYZbrands, data_abcxyz_pure
 ggplot(data_abcxyz_pure_XYZbrands, aes(x = brand, y = sku_count, fill = category_xyz, label = sku_count))+
   geom_col(position = "dodge")+
   geom_text(position = position_dodge(width= 0.9), angle=0, vjust=-1, hjust=0.5)+
-  scale_fill_brewer()+
+  scale_fill_brewer(palette = 1)+
   theme_minimal()+
   theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
   guides(fill = guide_legend(title = NULL))+
@@ -257,10 +343,8 @@ data_abcxyz_pure_ABCXYZbrands <- rbind(data_abcxyz_pure_ABCXYZbrands, data_abcxy
 ggplot(data_abcxyz_pure_ABCXYZbrands, aes(x = brand, y = sku_count, fill = category_abcxyz, label = sku_count))+
   geom_col(position = "dodge")+
   geom_text(position = position_dodge(width= 0.9), angle=0, vjust=-1, hjust=0.5)+
-  scale_fill_brewer()+
+  scale_fill_brewer(palette = 1)+
   theme_minimal()+
   theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
   guides(fill = guide_legend(title = NULL))+
   labs(title = "Количество SKU Савушкин продукт по брендам", x = "", y = "")
-
-#ДОБАВИТЬ КО ВСЕМ ГИСТОГРАММАМ С ДОЛЯМИ НАКОПИТЕЛЬНУЮ ЛИНИЮ, СДЕЛАТЬ ДИАГРАММЫ ДЛЯ ABC И XYZ АНАЛИЗОВ
