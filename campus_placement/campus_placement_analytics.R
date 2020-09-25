@@ -172,9 +172,14 @@ qplot(x = roc.data$cutoffs, y = roc.data$fpr, geom = "line")
 
 qplot(x = roc.data$fpr, y = roc.data$tpr, geom = "line")
 
-campus_dp_train$prob_if <- ifelse(campus_dp_train$prob >= 0.4, 1, 0)
+campus_dp_train$prob_if <- ifelse(campus_dp_train$prob >= 0.5, 1, 0)
 
 table(ifelse(campus_dp_train$prob_if == campus_dp_train$status_log, "Yes", "No"))
+campus_dp_train_x <- campus_dp_train[campus_dp_train$status_log == 1,]
+mean(campus_dp_train_x$status_log == campus_dp_train_x$prob_if)
+
+campus_dp_train_y <- campus_dp_train[campus_dp_train$status_log != 1,]
+mean(campus_dp_train_y$status_log == campus_dp_train_y$prob_if)
 
 ggplot(data = campus_dp_train, aes(ssc_p, prob)) +
   geom_line()+
@@ -200,5 +205,5 @@ campus_dp_test <- campus_dp[190:215,]
 pr_campus_test <- predict(fit, campus_dp_test, se = T)
 campus_dp_test <- cbind(campus_dp_test, pr_campus_test)
 campus_dp_test <- mutate(campus_dp_test, prob = plogis(fit))
-campus_dp_test$prob_if <- ifelse(campus_dp_test$prob >= 0.4, 1, 0)
+campus_dp_test$prob_if <- ifelse(campus_dp_test$prob >= 0.5, 1, 0)
 table(ifelse(campus_dp_test$prob_if == campus_dp_test$status_log, "Yes", "No"))
