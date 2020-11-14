@@ -4,6 +4,7 @@ library(stringr) #string operations
 library(ggplot2) #visualizations
 library(lmtest) #stat tests
 library(car) #stat tests
+library(caret) #stat tests
 library(sandwich) #stat tests
 library(nortest) #stat test
  
@@ -119,3 +120,69 @@ cor.test(x = eliminated$days_since_last_review, y = eliminated$price, method = "
 cor(eliminated[,c(11,12,14,15,16,19)], method = "spearman", use = "complete.obs")
 
 #Dividing data on train and test
+in_train <- createDataPartition(y = eliminated$price, p = 0.9, list = F)
+eliminated_train <- eliminated[in_train,]
+eliminated_test <- eliminated[-in_train,]
+
+#Creating linear regression
+model_0 <- lm(data = eliminated_train, price ~ minimum_nights+number_of_reviews+reviews_per_month+
+                availability_365+calculated_host_listings_count+days_since_last_review)
+summary(model_0)
+plot(model_0)
+hist(model_0$residuals)
+ad.test(model_0$residuals) #checking for residuals normality - not ok
+bptest(model_0) #checking for heteroscedasticity - not ok
+dwtest(model_0) #checking for autocorrelation - not ok
+
+##boxcox transforming
+bc <- boxCox(model_0)
+bc_opt <- bc$x[which.max(bc$y)]
+
+model_0_bc <- lm(data = eliminated_train, price^bc_opt ~ minimum_nights+number_of_reviews+reviews_per_month+
+                   availability_365+calculated_host_listings_count+days_since_last_review)
+summary(model_0_bc)
+plot(model_0_bc)
+hist(model_0_bc$residuals)
+ad.test(model_0_bc$residuals) #checking for residuals normality - not ok
+bptest(model_0_bc) #checking for heteroscedasticity - not ok
+dwtest(model_0_bc) #checking for autocorrelation - not ok
+
+model_1 <- lm(data = eliminated_train, price ~ minimum_nights+number_of_reviews+reviews_per_month+
+                availability_365+calculated_host_listings_count+days_since_last_review+room_type)
+summary(model_1)
+plot(model_1)
+hist(model_1$residuals)
+ad.test(model_1$residuals) #checking for residuals normality - not ok
+bptest(model_1) #checking for heteroscedasticity - not ok
+dwtest(model_1) #checking for autocorrelation - not ok
+
+model_2 <- lm(data = eliminated_train, price ~ minimum_nights+number_of_reviews+reviews_per_month+
+                availability_365+calculated_host_listings_count+days_since_last_review+room_type+city)
+summary(model_2)
+plot(model_2)
+hist(model_2$residuals)
+ad.test(model_2$residuals) #checking for residuals normality - not ok
+bptest(model_2) #checking for heteroscedasticity - not ok
+dwtest(model_2) #checking for autocorrelation - not ok
+
+model_3 <- lm(data = eliminated_train, price ~ minimum_nights+number_of_reviews+reviews_per_month+
+                availability_365+calculated_host_listings_count+
+                days_since_last_review+room_type+city+neighbourhood_group)
+summary(model_3)
+plot(model_3)
+hist(model_3$residuals)
+ad.test(model_3$residuals) #checking for residuals normality - not ok
+bptest(model_3) #checking for heteroscedasticity - not ok
+dwtest(model_2) #checking for autocorrelation - not ok
+
+model_4 <- lm(data = eliminated_train, price ~ room_type*minimum_nights+room_type*number_of_reviews+room_type*reviews_per_month+
+                room_type*availability_365+calculated_host_listings_count+
+                days_since_last_review)
+summary(model_4)
+plot(model_4)
+hist(model_4$residuals)
+ad.test(model_4$residuals) #checking for residuals normality - not ok
+bptest(model_4) #checking for heteroscedasticity - not ok
+dwtest(model_4) #checking for autocorrelation - not ok
+
+#let's try quantille regression
