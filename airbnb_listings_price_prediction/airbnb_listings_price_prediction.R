@@ -17,7 +17,8 @@ summary(airbnb)
 airbnb <- airbnb %>% 
   rename(id = п.їid) %>% 
   mutate(day = str_sub(last_review,1,2), month = str_sub(last_review,4,5),
-         year = factor(str_sub(last_review,7,8)))
+         year = factor(str_sub(last_review,7,8))) %>% 
+  mutate(across(c("id","host_id"), factor))
   
 levels(airbnb$year)
 
@@ -73,3 +74,48 @@ leveneTest(data = eliminated, price ~ city)
 kruskal.test(data = eliminated, price ~ city)
 
 ##continuous variables
+sapply(na.omit(eliminated[,sapply(eliminated, function(col) is.numeric(col))==T]), function(col) summary(col))
+cor(na.omit(eliminated[,c(10,11,12,14,15,16,19)]))
+
+hist(eliminated$minimum_nights) 
+summary(eliminated$minimum_nights) #it can't be 1 million minimum nights...
+Q_min_nights <- quantile(eliminated$minimum_nights, probs = c(0.25,0.75), na.rm = F)
+Q_min_nights
+iqr_min_nights <- IQR(eliminated$minimum_nights)
+iqr_min_nights
+up_border_min_nights <- Q_min_nights[2]+1.5*iqr_min_nights
+low_border_min_nights <- ifelse((Q_min_nights[1]-1.5*iqr_min_nights)<0,1,Q_min_nights[1]-1.5*iqr_min_nights)
+eliminated <- subset(eliminated, eliminated$minimum_nights>=low_border_min_nights & eliminated$minimum_nights<=up_border_min_nights)
+hist(eliminated$minimum_nights)
+boxplot(eliminated$minimum_nights)
+summary(eliminated$minimum_nights)
+cor.test(x = eliminated$minimum_nights, y = eliminated$price, method = "spearman")
+
+hist(eliminated$number_of_reviews)
+boxplot(eliminated$number_of_reviews)
+summary(eliminated$number_of_reviews)
+cor.test(x = eliminated$number_of_reviews, y = eliminated$price, method = "spearman")
+
+hist(eliminated$reviews_per_month)
+boxplot(eliminated$reviews_per_month)
+summary(eliminated$reviews_per_month)
+cor.test(x = eliminated$reviews_per_month, y = eliminated$price, method = "spearman")
+
+hist(eliminated$calculated_host_listings_count)
+boxplot(eliminated$calculated_host_listings_count)
+summary(eliminated$calculated_host_listings_count)
+cor.test(x = eliminated$calculated_host_listings_count, y = eliminated$price, method = "spearman")
+
+hist(eliminated$availability_365)
+boxplot(eliminated$availability_365)
+summary(eliminated$availability_365)
+cor.test(x = eliminated$availability_365, y = eliminated$price, method = "spearman")
+
+hist(eliminated$days_since_last_review)
+boxplot(eliminated$days_since_last_review)
+summary(eliminated$days_since_last_review)
+cor.test(x = eliminated$days_since_last_review, y = eliminated$price, method = "spearman")
+
+cor(eliminated[,c(11,12,14,15,16,19)], method = "spearman", use = "complete.obs")
+
+#Dividing data on train and test
