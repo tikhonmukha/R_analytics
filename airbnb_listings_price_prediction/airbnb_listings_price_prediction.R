@@ -205,4 +205,3 @@ dwtest(model_rq) #checking for autocorrelation - not ok
 model_multi <- lmer(data = eliminated_train, price ~ reviews_per_month + availability_365 + (1+reviews_per_month||room_type))
 summary(model_multi)
 eliminated_train$pred <- predict(model_multi)
-sum((eliminated_train$price-eliminated_train$pred)^2)
