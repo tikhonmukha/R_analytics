@@ -2,11 +2,14 @@ library(dplyr) #data manipulating
 library(tidyr) #data manipulating
 library(stringr) #string operations
 library(ggplot2) #visualizations
+library(quantreg) #quantille regression models
 library(lmtest) #stat tests
 library(car) #stat tests
 library(caret) #stat tests
 library(sandwich) #stat tests
 library(nortest) #stat test
+library(lme4) #multilevel models
+library(lmerTest) #multilevel models
  
 #reading and transforming data
 airbnb <- tibble(read.csv("AB_US_2020.csv", header = T, na.strings = "", stringsAsFactors = T))
@@ -14,6 +17,7 @@ head(airbnb)
 tail(airbnb)
 glimpse(airbnb)
 summary(airbnb)
+airbnb <- subset(airbnb, !is.na(airbnb$last_review))
 
 airbnb <- airbnb %>% 
   rename(id = п.їid) %>% 
@@ -39,6 +43,7 @@ airbnb <- airbnb %>%
   mutate(cur_date = Sys.Date()) %>% 
   mutate(days_since_last_review = as.integer(cur_date-last_review)) %>% 
   select(-c("day","month","year"))
+
 
 #exploring the variables
 ##main variable
@@ -186,3 +191,18 @@ bptest(model_4) #checking for heteroscedasticity - not ok
 dwtest(model_4) #checking for autocorrelation - not ok
 
 #let's try quantille regression
+model_rq <- rq(data = eliminated_train, price ~ minimum_nights+number_of_reviews+reviews_per_month+
+                  availability_365+calculated_host_listings_count+
+                  days_since_last_review, tau = c(0.1,0.5,0.9))
+summary(model_rq)
+plot(model_rq)
+hist(model_rq$residuals)
+ad.test(model_rq$residuals) #checking for residuals normality - not ok
+bptest(model_rq) #checking for heteroscedasticity - not ok
+dwtest(model_rq) #checking for autocorrelation - not ok
+
+#and multilevel model
+model_multi <- lmer(data = eliminated_train, price ~ reviews_per_month + availability_365 + (1+reviews_per_month||room_type))
+summary(model_multi)
+eliminated_train$pred <- predict(model_multi)
+sum((eliminated_train$price-eliminated_train$pred)^2)
