@@ -4,6 +4,7 @@ library(ggplot2)
 library(ggrepel)
 library(maps)
 library(mapproj)
+library(lsr)
 
 #Importing and transforming data
 shootings_data <- tibble(read.csv("shootings.csv", header = T, sep = ",", dec = ".",
@@ -158,3 +159,44 @@ ggplot(data = arms_category_data, aes(x = reorder(arms_category,-n), y = n, fill
   theme(legend.position = "none", plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))+
   labs(title = "Arm category distribution", x = "", y = "Total number")
+
+#Testing variables
+cramersV(table(shootings_data$armed, shootings_data$manner_of_death))
+table(shootings_data$armed, shootings_data$manner_of_death)
+fisher.test(table(shootings_data$armed, shootings_data$manner_of_death), simulate.p.value = T)
+
+cramersV(table(shootings_data$gender, shootings_data$manner_of_death))
+table(shootings_data$gender, shootings_data$manner_of_death)
+chisq.test(table(shootings_data$gender, shootings_data$manner_of_death), correct = F)
+
+cramersV(table(shootings_data$race, shootings_data$manner_of_death))
+table(shootings_data$race, shootings_data$manner_of_death)
+chisq.test(table(shootings_data$race, shootings_data$manner_of_death), correct = T)
+
+cramersV(table(shootings_data$city, shootings_data$manner_of_death))
+table(shootings_data$city, shootings_data$manner_of_death)
+fisher.test(table(shootings_data$city, shootings_data$manner_of_death), simulate.p.value = T)
+
+cramersV(table(shootings_data$state, shootings_data$manner_of_death))
+table(shootings_data$state, shootings_data$manner_of_death)
+fisher.test(table(shootings_data$state, shootings_data$manner_of_death), simulate.p.value = T)
+
+cramersV(table(shootings_data$signs_of_mental_illness, shootings_data$manner_of_death))
+table(shootings_data$signs_of_mental_illness, shootings_data$manner_of_death)
+chisq.test(table(shootings_data$signs_of_mental_illness, shootings_data$manner_of_death), correct = F)
+
+cramersV(table(shootings_data$threat_level, shootings_data$manner_of_death))
+table(shootings_data$threat_level, shootings_data$manner_of_death)
+chisq.test(table(shootings_data$threat_level, shootings_data$manner_of_death), correct = F)
+
+cramersV(table(shootings_data$flee, shootings_data$manner_of_death))
+table(shootings_data$flee, shootings_data$manner_of_death)
+chisq.test(table(shootings_data$flee, shootings_data$manner_of_death), correct = F)
+
+cramersV(table(shootings_data$body_camera, shootings_data$manner_of_death))
+table(shootings_data$body_camera, shootings_data$manner_of_death)
+chisq.test(table(shootings_data$body_camera, shootings_data$manner_of_death), correct = F)
+
+cramersV(table(shootings_data$arms_category, shootings_data$manner_of_death))
+table(shootings_data$arms_category, shootings_data$manner_of_death)
+fisher.test(table(shootings_data$arms_category, shootings_data$manner_of_death), simulate.p.value = T)
