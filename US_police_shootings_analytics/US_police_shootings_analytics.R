@@ -160,6 +160,18 @@ ggplot(data = arms_category_data, aes(x = reorder(arms_category,-n), y = n, fill
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))+
   labs(title = "Arm category distribution", x = "", y = "Total number")
 
+date_data <- shootings_data %>% 
+  select(date, year, month) %>% 
+  group_by(date, year, month) %>% 
+  count()
+
+ggplot(data = date_data, aes(x = month, y = n, fill = year))+
+  geom_col()+
+  facet_grid(~year, scales = "free")+
+  theme_minimal()+
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5))+
+  labs(title = "Kills dynamics by months and years", x = "Month number", y = "Total kills")
+
 #Testing variables
 cramersV(table(shootings_data$armed, shootings_data$manner_of_death))
 table(shootings_data$armed, shootings_data$manner_of_death)
@@ -200,3 +212,12 @@ chisq.test(table(shootings_data$body_camera, shootings_data$manner_of_death), co
 cramersV(table(shootings_data$arms_category, shootings_data$manner_of_death))
 table(shootings_data$arms_category, shootings_data$manner_of_death)
 fisher.test(table(shootings_data$arms_category, shootings_data$manner_of_death), simulate.p.value = T)
+
+ggplot(data = shootings_data, aes(x = manner_of_death, y = age, fill = manner_of_death))+
+  geom_boxplot()+
+  scale_y_continuous(limits = c(0,100))+
+  theme_minimal()+
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5))+
+  labs(title = "Does the age affect on the manner of death?", x = "", y = "Age")
+
+kruskal.test(data = shootings_data, age ~ manner_of_death)
