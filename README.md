@@ -1,1 +1,1 @@
-Different analytics projects using R
+My pet-projects in data analysis using R
